@@ -8,7 +8,6 @@
 
 
 #include "GameConfig.h"
-#include "BotColor.h"
 
 class Grid {
 private:

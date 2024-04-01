@@ -7,7 +7,7 @@
 #define CONNECT_SIX_BOT_BOT_H
 
 
-#include "BotColor.h"
+#include "GameConfig.h"
 #include "Result.h"
 #include "Grid.h"
 
