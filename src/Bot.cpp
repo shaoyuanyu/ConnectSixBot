@@ -39,7 +39,7 @@ Turn Bot::makeDecision(Grid& grid, int turnId) {
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
     // 模拟落子构建博弈树
-    simulateStep(root, grid, std::vector<Turn>(), botColor, 0, basicDepthLimit);
+    simulateStep(root, grid, std::vector<Turn>(), -botColor, 0, basicDepthLimit);
 
     std::cout << "find max..." << std::endl;
 
@@ -79,6 +79,7 @@ float Bot::simulateStep(GameNode*& currentNode, const Grid& currentGrid, const s
 
         // 调试输出
 //        std::cout << "step " << turnCount << ": " << "(" << currentNode->turn.x0 << ", " << currentNode->turn.y0 << ")" << ", (" << currentNode->turn.x1 << ", " << currentNode->turn.y1 << ")" << std::endl;
+//        std::cout << "isMaxNode: " << currentNode->isMaxNode << std::endl;
 //        std::cout << "evaluation: " << currentNode->score << std::endl << std::endl;
 
         return currentNode->score;
@@ -121,7 +122,7 @@ float Bot::simulateStep(GameNode*& currentNode, const Grid& currentGrid, const s
                     }
 
                     // child node
-                    auto* child = new GameNode(Turn(x0, y0, x1, y1), currentColor == botColor, currentNode->alpha, currentNode->beta);
+                    auto* child = new GameNode(Turn(x0, y0, x1, y1), -currentColor == botColor, currentNode->alpha, currentNode->beta);
                     if (turnCount == 0) {
                         currentNode->addChild(child);
                     }
