@@ -9,5 +9,5 @@ add_executable(
         src/GameConfig.h
         src/Bot.cpp src/Bot.h
         src/Grid.cpp src/Grid.h
-        src/GameTree.cpp src/GameTree.h
+        src/GameNode.cpp src/GameNode.h
 )

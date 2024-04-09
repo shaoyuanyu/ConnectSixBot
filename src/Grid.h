@@ -15,7 +15,7 @@ struct Grid {
 
     void doStep(int x, int y, Color color);
 
-    inline void addWeight(int x, int y);
+    inline void addWeight(int x, int y, int addition);
 
     void output();
 };

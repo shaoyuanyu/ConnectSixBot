@@ -50,14 +50,14 @@ int main() {
     int turnId = inputGrid(grid, bot);
 
     // 我方为黑开局
-    if (turnId == 1 && bot.getColor() == BLACK) {
-        std::cout << 7 << ' ' << 7 << ' ' << -1 << ' ' << -1 << std::endl;
-        return 0;
-    }
+//    if (turnId == 1 && bot.getColor() == BLACK) {
+//        std::cout << 7 << ' ' << 7 << ' ' << -1 << ' ' << -1 << std::endl;
+//        return 0;
+//    }
 
     std::cout << "make decision..." << std::endl;
     grid.output();
-    Turn result = bot.makeDecision(grid);
+    Turn result = bot.makeDecision(grid, turnId);
 
     std::cout << result.x0 << ' ' << result.y0 << ' ' << result.x1 << ' ' << result.y1 << std::endl;
 
