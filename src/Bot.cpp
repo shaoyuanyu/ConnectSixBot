@@ -3,20 +3,22 @@
 // 2024/3/28, 29
 //
 #include "Bot.h"
+#include "GameTree.h"
 
-void Bot::setColor(BotColor c) {
-    currentColor = c;
+void Bot::setColor(Color c) {
+    botColor = c;
 }
 
-BotColor Bot::getColor() {
-    return currentColor;
+Color Bot::getColor() {
+    return botColor;
 }
 
-BotColor Bot::getOppositeColor() {
-    return -currentColor;
+Color Bot::getOppositeColor() {
+    return -botColor;
 }
 
-Result Bot::makeDecision(Grid &grid) {
+Turn Bot::makeDecision(Grid& grid) {
     // 基于博弈树进行决策
-    return Result(0, 0, 0, 0);
+    GameTree gameTree(botColor);
+    return gameTree.makeDecision(grid);
 }

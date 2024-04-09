@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(
         ConnectSixBot
         src/main.cpp
+        src/GameConfig.h
         src/Bot.cpp src/Bot.h
         src/Grid.cpp src/Grid.h
-        src/GameConfig.h
-        src/Result.h
+        src/GameTree.cpp src/GameTree.h
 )

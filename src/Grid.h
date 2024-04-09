@@ -9,12 +9,15 @@
 
 #include "GameConfig.h"
 
-class Grid {
-private:
-    BotColor grid[GRID_SIZE][GRID_SIZE] = { blank };
+struct Grid {
+    Color grid[GRID_SIZE][GRID_SIZE] = { BLANK };
+    int weight[GRID_SIZE][GRID_SIZE] = { 0 };
 
-public:
-    void doStep(int x, int y, BotColor color);
+    void doStep(int x, int y, Color color);
+
+    inline void addWeight(int x, int y);
+
+    void output();
 };
 
 

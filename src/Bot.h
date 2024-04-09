@@ -8,20 +8,19 @@
 
 
 #include "GameConfig.h"
-#include "Result.h"
 #include "Grid.h"
 
 class Bot {
 private:
-    BotColor currentColor;
+    Color botColor;
 
-    Result makeOpening(Grid& grid); // 基于开局库进行开局决策
+    Turn makeOpening(Grid& grid); // 基于开局库进行开局决策
 
 public:
-    void setColor(BotColor c);
-    BotColor getColor(); // 获取我方颜色
-    BotColor getOppositeColor(); // 获取对手颜色
-    Result makeDecision(Grid& grid); // 基于博弈树进行决策
+    void setColor(Color c);
+    Color getColor(); // 获取我方颜色
+    Color getOppositeColor(); // 获取对手颜色
+    Turn makeDecision(Grid& grid); // 基于博弈树进行决策
 };
 
 
