@@ -13,23 +13,32 @@ void Grid::doStep(int x, int y, Color color) {
         data[x][y] = color;
 
         // 内层
-        addWeight(x-1, y, 2);
-        addWeight(x+1, y, 2);
-        addWeight(x, y-1, 2);
-        addWeight(x, y+1, 2);
-        addWeight(x-1, y-1, 2);
-        addWeight(x-1, y+1, 2);
-        addWeight(x+1, y-1, 2);
-        addWeight(x+1, y+1, 2);
+        addWeight(x-1, y, 3);
+        addWeight(x+1, y, 3);
+        addWeight(x, y-1, 3);
+        addWeight(x, y+1, 3);
+        addWeight(x-1, y-1, 3);
+        addWeight(x-1, y+1, 3);
+        addWeight(x+1, y-1, 3);
+        addWeight(x+1, y+1, 3);
+        // 中层
+        addWeight(x-2, y, 2);
+        addWeight(x+2, y, 2);
+        addWeight(x, y-2, 2);
+        addWeight(x, y+2, 2);
+        addWeight(x-2, y-2, 2);
+        addWeight(x-2, y+2, 2);
+        addWeight(x+2, y-2, 2);
+        addWeight(x+2, y+2, 2);
         // 外层
-        addWeight(x-2, y, 1);
-        addWeight(x+2, y, 1);
-        addWeight(x, y-2, 1);
-        addWeight(x, y+2, 1);
-        addWeight(x-2, y-2, 1);
-        addWeight(x-2, y+2, 1);
-        addWeight(x+2, y-2, 1);
-        addWeight(x+2, y+2, 1);
+        addWeight(x-3, y, 1);
+        addWeight(x+3, y, 1);
+        addWeight(x, y-3, 1);
+        addWeight(x, y+3, 1);
+        addWeight(x-3, y-3, 1);
+        addWeight(x-3, y+3, 1);
+        addWeight(x+3, y-3, 1);
+        addWeight(x+3, y+3, 1);
     }
 }
 
@@ -50,6 +59,8 @@ std::vector<Step> Grid::getAvailable(const int topK) {
     for (int x=0; x<GRID_SIZE; x++) {
         for (int y=0; y<GRID_SIZE; y++) {
             if (data[x][y] != BLANK) continue;
+            if (weight[x][y] == 0) continue;
+
             stepCandidates.push(
                     StepCandidate(Step(x, y), weight[x][y])
             );

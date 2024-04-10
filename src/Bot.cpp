@@ -34,11 +34,15 @@ Turn Bot::makeOpening() {
  * 根据点位权重计算深度，主要是为了设置深度上限
  */
 inline int Bot::getDepthByWeight(int weight0, int weight1) {
-    int averageWeight = (weight0 + weight1) / 2;
+//    int averageWeight = (weight0 + weight1) / 2;
+    int averageWeight = (weight0 < weight1) ? weight0 : weight1;
 
-    if (averageWeight <= 3) return 0;
-    else if (averageWeight <= 9) return 2;
-    else return 4;
+    if (averageWeight <= 2) return 0;
+    else if (averageWeight <= 6) return 1;
+    else if (averageWeight <= 12) return 2;
+    else if (averageWeight <= 15) return 3;
+
+    return 2;
 }
 
 
@@ -50,7 +54,7 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
     // 获取可选落子点
-    std::vector<Step> availableSteps = grid.getAvailable(30);
+    std::vector<Step> availableSteps = grid.getAvailable(25);
 
     // 调试输出
     for (Step availableStep: availableSteps) {
@@ -122,7 +126,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     float max = -FLT_MAX, min = FLT_MAX;
 
     // 继续搜索
-    std::vector<Step> availableSteps = currentGrid.getAvailable(30-turnCount*10);
+    std::vector<Step> availableSteps = currentGrid.getAvailable(25/turnCount);
 
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
