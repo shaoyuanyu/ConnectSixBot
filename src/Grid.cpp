@@ -35,11 +35,8 @@ void Grid::doStep(int x, int y, Color color) {
 
 inline void Grid::addWeight(int x, int y, int addition) {
     if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return;
-    if (weight[x][y] >= 2) return; // 权重上限
 
     weight[x][y] += addition;
-
-    if (weight[x][y] > 2) weight[x][y] = 2;
 }
 
 

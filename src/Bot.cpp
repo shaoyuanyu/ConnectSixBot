@@ -31,6 +31,18 @@ Turn Bot::makeOpening() {
 
 
 /**
+ * 根据点位权重计算深度，主要是为了设置深度上限
+ */
+inline int Bot::getDepthByWeight(int weight0, int weight1) {
+    int averageWeight = (weight0 + weight1) / 2;
+
+    if (averageWeight <= 3) return 0;
+    else if (averageWeight <= 9) return 2;
+    else return 4;
+}
+
+
+/**
  * 基于博弈树进行决策
  */
 Turn Bot::makeDecision(Grid& grid, const int& turnId) {
@@ -38,7 +50,7 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
     // 获取可选落子点
-    std::vector<Step> availableSteps = grid.getAvailable(50);
+    std::vector<Step> availableSteps = grid.getAvailable(30);
 
     // 调试输出
     for (Step availableStep: availableSteps) {
@@ -67,7 +79,7 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
             std::vector<Turn> preTurns;
             preTurns.push_back(thisTurn);
             // depth limit
-            int currentDepthLimit = basicDepthLimit + (grid.weight[step0.x][step0.y]+grid.weight[step1.x][step1.y])/2;
+            int currentDepthLimit = basicDepthLimit + getDepthByWeight(grid.weight[step0.x][step0.y], grid.weight[step1.x][step1.y]);
 
             // 模拟落子构建博弈树
             float score = simulateStep(child, nextGrid, preTurns, botColor, 1, currentDepthLimit);
@@ -109,7 +121,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     float max = -FLT_MAX, min = FLT_MAX;
 
     // 继续搜索
-    std::vector<Step> availableSteps = currentGrid.getAvailable(50-turnCount*20);
+    std::vector<Step> availableSteps = currentGrid.getAvailable(30-turnCount*10);
 
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
