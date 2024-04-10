@@ -105,6 +105,7 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
 /**
  * 模拟走步
  * 递归建立博弈树，在叶节点调用评估函数，反向传播评估得分
+ * minimax + alpha-beta剪枝
  */
 float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::vector<Turn>& preTurns, const Color currentColor, int turnCount, int currentDepthLimit) {
     // 若搜索深度触底，终止搜索，进行评估
@@ -131,7 +132,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
             // this turn
             Turn currentTurn(step0.x, step0.y, step1.x, step1.y);
             // child node
-            auto* child = new GameNode(currentTurn, -(currentColor) == botColor);
+            auto* child = new GameNode(currentTurn, -(currentColor) == botColor, currentNode->alpha, currentNode->beta);
             // next grid
             Grid nextGrid = currentGrid;
             nextGrid.doStep(step0.x, step0.y, currentColor);
@@ -146,11 +147,19 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
             // 释放内存
             delete child; // 耗时操作
 
-            // 反向传递
+            // 分数反向传递 和 alpha-beta更新
             if (currentNode->isMaxNode) {
                 if (childScore > max) max = childScore;
+                if (childScore > currentNode->beta) currentNode->beta = childScore;
             } else {
                 if (childScore < min) min = childScore;
+                if (childScore < currentNode->alpha) currentNode->alpha = childScore;
+            }
+
+            // 检查alpha-beta，判断是否剪枝
+            if (currentNode->alpha < currentNode->beta) {
+                currentNode->score = (currentNode->isMaxNode) ? max : min;
+                return currentNode->score;
             }
         }
     }

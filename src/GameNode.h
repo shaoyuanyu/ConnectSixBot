@@ -18,7 +18,6 @@ struct GameNode {
     float alpha = FLT_MAX; // 上确界
     float beta = -FLT_MAX; // 下确界
 
-    GameNode(): turn(Turn(-1, -1, -1, -1)), isMaxNode(true) {}
     GameNode(Turn turn, bool isMaxNode): turn(turn), isMaxNode(isMaxNode) {}
     GameNode(Turn turn, bool isMaxNode, float alpha, float beta): turn(turn), isMaxNode(isMaxNode), alpha(alpha), beta(beta) {}
 };
