@@ -34,6 +34,7 @@ struct Turn {
     int x0, y0;
     int x1, y1;
 };
+// TODO: Turn能否用两个Step组合
 
 
 #endif //CONNECT_SIX_BOT_GAME_CONFIG_H

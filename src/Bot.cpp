@@ -7,18 +7,17 @@
 #include <iostream>
 #include <cmath>
 
-
 void Bot::setColor(Color c) {
     botColor = c;
 }
 
 
-Color Bot::getColor() {
+Color Bot::getColor() const {
     return botColor;
 }
 
 
-Color Bot::getOppositeColor() {
+Color Bot::getOppositeColor() const {
     return -botColor;
 }
 
@@ -34,28 +33,60 @@ Turn Bot::makeOpening() {
 /**
  * 基于博弈树进行决策
  */
-Turn Bot::makeDecision(Grid& grid, int turnId) {
-    // 我方为黑开局
+Turn Bot::makeDecision(Grid& grid, const int& turnId) {
+    // 我方为黑开局，则转向开局库决策
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
-    // 模拟落子构建博弈树
-    simulateStep(root, grid, std::vector<Turn>(), -botColor, 0, basicDepthLimit);
+    // 获取可选落子点
+    std::vector<Step> availableSteps = grid.getAvailable(50);
 
-    std::cout << "find max..." << std::endl;
+    // 调试输出
+    for (Step availableStep: availableSteps) {
+        std::cout << "(" << availableStep.x << ", " << availableStep.y << ")\t";
+    }
+    std::cout << std::endl << std::endl;
 
-    Turn nextTurn = root->children[0]->turn;
-    float max = root->children[0]->score;
+    float max = -FLT_MAX;
+    Turn maxTurn(-1, -1, -1, -1);
 
-    for (GameNode* child: root->children) {
-        std::cout << "(" << child->turn.x0 << ", " << child->turn.y0 << ")" << ", (" << child->turn.x1 << ", " << child->turn.y1 << "): " << child->score << std::endl;
+    for (int i=0; i<availableSteps.size(); i++) {
+        Step step0 = availableSteps[i];
+        for (int j=i+1; j<availableSteps.size(); j++) {
+            Step step1 = availableSteps[j];
 
-        if (child->score > max) {
-            max = child->score;
-            nextTurn = child->turn;
+            // turn
+            Turn thisTurn = Turn(step0.x, step0.y, step1.x, step1.y);
+            //
+            auto* child = new GameNode(thisTurn, true);
+            firstTurnNodes.push_back(child);
+            // grid
+            Grid nextGrid = grid;
+            nextGrid.doStep(step0.x, step0.y, botColor);
+            nextGrid.doStep(step1.x, step1.y, botColor);
+            // pre turns
+            std::vector<Turn> preTurns;
+            preTurns.push_back(thisTurn);
+            // depth limit
+            int currentDepthLimit = basicDepthLimit + (grid.weight[step0.x][step0.y]+grid.weight[step1.x][step1.y])/2;
+
+            // 模拟落子构建博弈树
+            float score = simulateStep(child, nextGrid, preTurns, botColor, 1, currentDepthLimit);
+
+            // 调试输出
+            std::cout << "(" << child->turn.x0 << ", " << child->turn.y0 << ")" << ", (" << child->turn.x1 << ", " << child->turn.y1 << ")" << std::endl;
+            std::cout << "score: " << score << std::endl;
+            std::cout << "depth: " << currentDepthLimit << std::endl;
+            std::cout << std::endl;
+
+            // 更新最大分数和落子
+            if (score > max) {
+                max = score;
+                maxTurn = thisTurn;
+            }
         }
     }
 
-    return nextTurn;
+    return maxTurn;
 }
 
 
@@ -63,13 +94,7 @@ Turn Bot::makeDecision(Grid& grid, int turnId) {
  * 模拟走步
  * 递归建立博弈树，在叶节点调用评估函数，反向传播评估得分
  */
-float Bot::simulateStep(GameNode*& currentNode, const Grid& currentGrid, const std::vector<Turn>& preTurns, const Color currentColor, int turnCount, int currentDepthLimit) {
-    if (turnCount == 1) {
-        int weight0 = currentGrid.weight[currentNode->turn.x0][currentNode->turn.y0];
-        int weight1 = currentGrid.weight[currentNode->turn.x1][currentNode->turn.y1];
-        currentDepthLimit = basicDepthLimit + (weight0+weight1)/2;
-    }
-
+float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::vector<Turn>& preTurns, const Color currentColor, int turnCount, int currentDepthLimit) {
     // 若搜索深度触底，终止搜索，进行评估
     if (turnCount == currentDepthLimit) {
         for (Turn preTurn: preTurns) {
@@ -77,98 +102,43 @@ float Bot::simulateStep(GameNode*& currentNode, const Grid& currentGrid, const s
             currentNode->score += evaluate(currentGrid, Step(preTurn.x1, preTurn.y1));
         }
 
-        // 调试输出
-//        std::cout << "step " << turnCount << ": " << "(" << currentNode->turn.x0 << ", " << currentNode->turn.y0 << ")" << ", (" << currentNode->turn.x1 << ", " << currentNode->turn.y1 << ")" << std::endl;
-//        std::cout << "isMaxNode: " << currentNode->isMaxNode << std::endl;
-//        std::cout << "evaluation: " << currentNode->score << std::endl << std::endl;
-
         return currentNode->score;
     }
 
     // 最大值，最小值
-    float max = FLT_MIN, min = FLT_MAX;
+    float max = -FLT_MAX, min = FLT_MAX;
 
     // 继续搜索
-    for (int x0=0; x0<GRID_SIZE; x0++) {
-        for (int y0=0; y0<GRID_SIZE; y0++) {
-            // 第一手落子位置非空
-            if (currentGrid.grid[x0][y0] != BLANK) continue;
-            // 第一手落子位置过于疏松
-            if (currentGrid.weight[x0][y0] == 0) continue;
+    std::vector<Step> availableSteps = currentGrid.getAvailable(50-turnCount*20);
 
-            // 寻找第二手落子
-            for (int x1 = x0; x1 < GRID_SIZE; x1++) {
-                // 确定y1初始值
-                int y1Start = 0;
-                if (x1 == x0) {
-                    if (y0 == GRID_SIZE - 1) continue;
-                    y1Start = y0 + 1;
-                }
+    for (int i=0; i<availableSteps.size(); i++) {
+        Step step0 = availableSteps[i];
+        for (int j=i+1; j<availableSteps.size(); j++) {
+            Step step1 = availableSteps[j];
 
-                for (int y1=y1Start; y1<GRID_SIZE; y1++) {
-                    // 第二手落子位置非空
-                    if (currentGrid.grid[x1][y1] != BLANK) continue;
-                    // 第二手落子位置过于疏松
-                    if (currentGrid.weight[x1][y1] == 0) continue;
+            // this turn
+            Turn currentTurn(step0.x, step0.y, step1.x, step1.y);
+            // child node
+            auto* child = new GameNode(currentTurn, -(currentColor) == botColor);
+            // next grid
+            Grid nextGrid = currentGrid;
+            nextGrid.doStep(step0.x, step0.y, currentColor);
+            nextGrid.doStep(step1.x, step1.y, currentColor);
+            // new preTurns list
+            std::vector<Turn> newTurns = preTurns;
+            newTurns.push_back(currentTurn);
 
-                    // alpha-beta检查
-                    if (currentNode->alpha < currentNode->beta) {
-//                        std::cout << "turn " << turnCount << ": (" << currentNode->turn.x0 << ", " << currentNode->turn.y0 << "), (" << currentNode->turn.x1 << ", " << currentNode->turn.y1 << ") " << "alpha-beta cut." << std::endl;
-                        currentNode->score = (currentNode->isMaxNode) ? max : min;
-                        return currentNode->score;
-                    } else if (currentNode->alpha == currentNode->beta) {
-                        currentNode->score = currentNode->alpha;
-                        return currentNode->score;
-                    }
+            // 继续搜索
+            float childScore = simulateStep(child, nextGrid, newTurns, -(currentColor), turnCount + 1, currentDepthLimit);
 
-                    // child node
-                    auto* child = new GameNode(Turn(x0, y0, x1, y1), -currentColor == botColor, currentNode->alpha, currentNode->beta);
-                    if (turnCount == 0) {
-                        currentNode->addChild(child);
-                    }
-                    //
-                    Grid newGrid = currentGrid;
-                    newGrid.doStep(x0, y0, currentColor);
-                    newGrid.doStep(x1, y1, currentColor);
-                    //
-                    std::vector<Turn> newTurns = preTurns;
-                    newTurns.push_back(child->turn);
+            // 释放内存
+            delete child; // 耗时操作
 
-                    // 继续搜索
-                    float childScore = simulateStep(child, newGrid, newTurns, -currentColor, turnCount + 1, currentDepthLimit);
-
-                    // 反向传递
-                    if (currentNode->isMaxNode && childScore > max) {
-                        max = childScore;
-                    } else if (!currentNode->isMaxNode && childScore < min) {
-                        min = childScore;
-                    }
-
-                    // alpha-beta更新
-                    if (currentNode->isMaxNode) {
-                        if (childScore > currentNode->beta) {
-                            currentNode->beta = childScore;
-                        }
-                    } else {
-                        if (childScore < currentNode->alpha) {
-                            currentNode->alpha = childScore;
-                        }
-                    }
-
-                    // 调试输出
-                    if (turnCount == 0) {
-                        std::cout << "turn " << turnCount + 1 << ": " << "(" << child->turn.x0 << ", " << child->turn.y0 << ")" << ", (" << child->turn.x1 << ", " << child->turn.y1 << ")" << std::endl;
-                        std::cout << "isMaxNode: " << currentNode->isMaxNode << std::endl;
-                        std::cout << "score: " << childScore << std::endl;
-                        std::cout << "alpha: " << currentNode->alpha << ", beta: " << currentNode->beta << std::endl;
-                        std::cout << std::endl;
-                    }
-
-                    //
-                    if (turnCount >= 1) {
-                        delete child;
-                    }
-                }
+            // 反向传递
+            if (currentNode->isMaxNode) {
+                if (childScore > max) max = childScore;
+            } else {
+                if (childScore < min) min = childScore;
             }
         }
     }
@@ -179,17 +149,16 @@ float Bot::simulateStep(GameNode*& currentNode, const Grid& currentGrid, const s
 }
 
 
-
 /**
  * 计数，同色+1,异色-1并终止，空位记为0.2
  */
 inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count) {
     if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return false;
 
-    if (grid.grid[x][y] == currentColor) {
+    if (grid.data[x][y] == currentColor) {
         // 同色
         count += 1;
-    } else if (grid.grid[x][y] == -currentColor) {
+    } else if (grid.data[x][y] == -currentColor) {
         // 遇异色终止计数
         count += -1;
         return false;
@@ -206,7 +175,7 @@ inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color
  * 评估函数
  */
 float Bot::evaluate(Grid grid, Step step) {
-    Color currentColor = grid.grid[step.x][step.y];
+    Color currentColor = grid.data[step.x][step.y];
     int x, y;
     float inLineCount = 1, inColumnCount = 1, inLeftDiagonalCount = 1, inRightDiagonalCount = 1;
     bool isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
