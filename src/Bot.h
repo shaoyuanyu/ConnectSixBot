@@ -18,7 +18,7 @@ private:
     int basicDepthLimit = 1; // 每次推理深度
     int topK = 20;
 
-    Turn maxTurn;
+    Turn maxTurn = Turn(-1, -1, -1, -1);
 
     std::vector<GameNode*> firstTurnNodes;
 
