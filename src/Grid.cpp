@@ -12,33 +12,17 @@ void Grid::doStep(int x, int y, Color color) {
     if (data[x][y] == BLANK) {
         data[x][y] = color;
 
-        // 内层
-        addWeight(x-1, y, 3);
-        addWeight(x+1, y, 3);
-        addWeight(x, y-1, 3);
-        addWeight(x, y+1, 3);
-        addWeight(x-1, y-1, 3);
-        addWeight(x-1, y+1, 3);
-        addWeight(x+1, y-1, 3);
-        addWeight(x+1, y+1, 3);
-        // 中层
-        addWeight(x-2, y, 2);
-        addWeight(x+2, y, 2);
-        addWeight(x, y-2, 2);
-        addWeight(x, y+2, 2);
-        addWeight(x-2, y-2, 2);
-        addWeight(x-2, y+2, 2);
-        addWeight(x+2, y-2, 2);
-        addWeight(x+2, y+2, 2);
-        // 外层
-        addWeight(x-3, y, 1);
-        addWeight(x+3, y, 1);
-        addWeight(x, y-3, 1);
-        addWeight(x, y+3, 1);
-        addWeight(x-3, y-3, 1);
-        addWeight(x-3, y+3, 1);
-        addWeight(x+3, y-3, 1);
-        addWeight(x+3, y+3, 1);
+        for (int i=1; i<=5; i++) {
+            int w = 1;
+            addWeight(x-i, y, w);
+            addWeight(x+i, y, w);
+            addWeight(x, y-i, w);
+            addWeight(x, y+i, w);
+            addWeight(x-i, y-i, w);
+            addWeight(x-i, y+i, w);
+            addWeight(x+i, y-i, w);
+            addWeight(x+i, y+i, w);
+        }
     }
 }
 

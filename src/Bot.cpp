@@ -37,12 +37,11 @@ inline int Bot::getDepthByWeight(int weight0, int weight1) {
 //    int averageWeight = (weight0 + weight1) / 2;
     int averageWeight = (weight0 < weight1) ? weight0 : weight1;
 
-    if (averageWeight <= 2) return 0;
-    else if (averageWeight <= 6) return 1;
-    else if (averageWeight <= 12) return 2;
-    else if (averageWeight <= 15) return 3;
-
-    return 2;
+    if (averageWeight <= 1) return 0;
+    else if (averageWeight <= 2) return 1;
+    else if (averageWeight <= 4) return 2;
+    else if (averageWeight <= 6) return 3;
+    return 3;
 }
 
 
@@ -171,7 +170,7 @@ inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color
 float Bot::evaluate(Grid grid, Step step) {
     Color currentColor = grid.data[step.x][step.y];
     int x, y;
-    float inLineCount = 1, inColumnCount = 1, inLeftDiagonalCount = 1, inRightDiagonalCount = 1;
+    float inLineCount = 0, inColumnCount = 0, inLeftDiagonalCount = 0, inRightDiagonalCount = 0;
     bool isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
 
     for (int shift = -1; shift >= -5; shift--) {
