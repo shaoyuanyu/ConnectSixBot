@@ -32,6 +32,8 @@ struct StepCandidate {
     Step step;
     int weight;
 
+    StepCandidate(Step step, int weight): step(step), weight(weight) {}
+
     bool operator<(const StepCandidate& other) {
         if (weight == other.weight) {
             // 如果权重相等则倾向居中的位置

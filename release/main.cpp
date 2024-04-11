@@ -1,15 +1,9 @@
-//
-// ysy
-// 2024/3/29
-//
-
 #include <iostream>
 #include <sys/time.h>
 #include <vector>
-#include <queue>
-#include <cmath>
 #include <cfloat>
-
+#include <cmath>
+#include <queue>
 
 
 /**
@@ -24,38 +18,27 @@
 #define BLANK 0
 #define BLACK 1
 typedef int Color;
-struct Turn {
-    int x0, y0;
-    int x1, y1;
-    Turn (int a,int b,int c,int d){
-        x0 = a;
-        y0 = b;
-        x1 = c;
-        y1 = d;
-    };
-};
-//endl
+
+/**
+ * 一手落子
+ */
 struct Step {
     int x;
     int y;
-    Step (int a,int b){
-        x = a;
-        y = b;
-    };
+
+    Step(int x, int y): x(x), y(y) {}
 };
 
-struct GameNode {
-    float score = 0.0;
-    Turn turn; // 一回合，两手落子
-    bool isMaxNode; // 是否为Max节点
-    float alpha = FLT_MAX; // 上确界
-    float beta = -FLT_MAX; // 下确界
+/**
+ * 一回合包括两手落子
+ */
+struct Turn {
+    int x0, y0;
+    int x1, y1;
 
-    GameNode(Turn turn, bool isMaxNode): turn(turn), isMaxNode(isMaxNode) {}
-    GameNode(Turn turn, bool isMaxNode, float alpha, float beta): turn(turn), isMaxNode(isMaxNode), alpha(alpha), beta(beta) {}
+    Turn(int x0, int y0, int x1, int y1): x0(x0), y0(y0), x1(x1), y1(y1) {}
+    Turn(Step step0, Step step1): x0(step0.x), y0(step0.y), x1(step1.x), y1(step1.y) {}
 };
-
-
 
 
 struct Grid {
@@ -71,10 +54,15 @@ struct Grid {
 };
 
 
+/**
+ * 用于候选位置的排序
+ */
 struct StepCandidate {
     Step step;
     int weight;
-    StepCandidate (Step x,int m):step(x),weight(m){};
+
+    StepCandidate(Step step, int weight): step(step), weight(weight) {}
+
     bool operator<(const StepCandidate& other) {
         if (weight == other.weight) {
             // 如果权重相等则倾向居中的位置
@@ -84,10 +72,115 @@ struct StepCandidate {
     }
 };
 
+
+void Grid::doStep(int x, int y, Color color) {
+    if (x == -1) return;
+
+    if (data[x][y] == BLANK) {
+        data[x][y] = color;
+
+        // 内层
+        addWeight(x-1, y, 3);
+        addWeight(x+1, y, 3);
+        addWeight(x, y-1, 3);
+        addWeight(x, y+1, 3);
+        addWeight(x-1, y-1, 3);
+        addWeight(x-1, y+1, 3);
+        addWeight(x+1, y-1, 3);
+        addWeight(x+1, y+1, 3);
+        // 中层
+        addWeight(x-2, y, 2);
+        addWeight(x+2, y, 2);
+        addWeight(x, y-2, 2);
+        addWeight(x, y+2, 2);
+        addWeight(x-2, y-2, 2);
+        addWeight(x-2, y+2, 2);
+        addWeight(x+2, y-2, 2);
+        addWeight(x+2, y+2, 2);
+        // 外层
+        addWeight(x-3, y, 1);
+        addWeight(x+3, y, 1);
+        addWeight(x, y-3, 1);
+        addWeight(x, y+3, 1);
+        addWeight(x-3, y-3, 1);
+        addWeight(x-3, y+3, 1);
+        addWeight(x+3, y-3, 1);
+        addWeight(x+3, y+3, 1);
+    }
+}
+
+inline void Grid::addWeight(int x, int y, int addition) {
+    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return;
+
+    weight[x][y] += addition;
+}
+
+
+/**
+ * 利用priority_queue从棋盘中选出前topK个（如果存在）的点位
+ */
+std::vector<Step> Grid::getAvailable(const int topK) {
+    std::priority_queue<StepCandidate, std::vector<StepCandidate>, std::less<>> stepCandidates;
+    std::vector<Step> availableSteps;
+
+    for (int x=0; x<GRID_SIZE; x++) {
+        for (int y=0; y<GRID_SIZE; y++) {
+            if (data[x][y] != BLANK) continue;
+            if (weight[x][y] == 0) continue;
+
+            stepCandidates.push(
+                    StepCandidate(Step(x, y), weight[x][y])
+            );
+        }
+    }
+
+    for (int i=0; i<topK && !stepCandidates.empty(); i++) {
+        availableSteps.push_back(stepCandidates.top().step);
+        stepCandidates.pop();
+    }
+
+    return availableSteps;
+}
+
+
+void Grid::output() {
+    for (int x=0; x<GRID_SIZE; x++) {
+        for (int y=0; y<GRID_SIZE; y++) {
+            std::cout << data[x][y] << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    for (int x=0; x<GRID_SIZE; x++) {
+        for (int y=0; y<GRID_SIZE; y++) {
+            std::cout << weight[x][y] << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+
+struct GameNode {
+    float score = 0.0;
+    Turn turn; // 一回合，两手落子
+    bool isMaxNode; // 是否为Max节点
+    float alpha = FLT_MAX; // 上确界
+    float beta = -FLT_MAX; // 下确界
+
+    GameNode(Turn turn, bool isMaxNode): turn(turn), isMaxNode(isMaxNode) {}
+    GameNode(Turn turn, bool isMaxNode, float alpha, float beta): turn(turn), isMaxNode(isMaxNode), alpha(alpha), beta(beta) {}
+};
+
+
 class Bot {
 private:
     Color botColor;
     int basicDepthLimit = 1; // 每次推理深度
+    int topK = 20;
+
+    Turn maxTurn = Turn(-1, -1, -1, -1);
 
     std::vector<GameNode*> firstTurnNodes;
 
@@ -103,6 +196,7 @@ public:
     Color getOppositeColor() const; // 获取对手颜色
     Turn makeDecision(Grid& grid, const int& turnId); // 基于博弈树进行决策
 };
+
 
 void Bot::setColor(Color c) {
     botColor = c;
@@ -150,54 +244,9 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
     // 我方为黑开局，则转向开局库决策
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
-    // 获取可选落子点2
-    std::vector<Step> availableSteps = grid.getAvailable(20);
-
-    // 调试输出
-    for (Step availableStep: availableSteps) {
-//        std::cout << "(" << availableStep.x << ", " << availableStep.y << ")\t";
-    }
-//    std::cout << std::endl << std::endl;
-
-    float max = -FLT_MAX;
-    Turn maxTurn(-1, -1, -1, -1);
-
-    for (int i=0; i<availableSteps.size(); i++) {
-        Step step0 = availableSteps[i];
-        for (int j=i+1; j<availableSteps.size(); j++) {
-            Step step1 = availableSteps[j];
-
-            // turn
-            Turn thisTurn = Turn(step0.x, step0.y, step1.x, step1.y);
-            //
-            auto* child = new GameNode(thisTurn, false);
-            firstTurnNodes.push_back(child);
-            // grid
-            Grid nextGrid = grid;
-            nextGrid.doStep(step0.x, step0.y, botColor);
-            nextGrid.doStep(step1.x, step1.y, botColor);
-            // pre turns
-            std::vector<Turn> preTurns;
-            preTurns.push_back(thisTurn);
-            // depth limit
-            int currentDepthLimit = basicDepthLimit + getDepthByWeight(grid.weight[step0.x][step0.y], grid.weight[step1.x][step1.y]);
-
-            // 模拟落子构建博弈树
-            float score = simulateStep(child, nextGrid, preTurns, botColor, 1, currentDepthLimit);
-
-            // 调试输出
-//            std::cout << "(" << child->turn.x0 << ", " << child->turn.y0 << ")" << ", (" << child->turn.x1 << ", " << child->turn.y1 << ")" << std::endl;
-//            std::cout << "score: " << score << std::endl;
-//            std::cout << "depth: " << currentDepthLimit << std::endl;
-//            std::cout << std::endl;
-
-            // 更新最大分数和落子
-            if (score > max) {
-                max = score;
-                maxTurn = thisTurn;
-            }
-        }
-    }
+    // 构建博弈树进行推理
+    auto* root = new GameNode(Turn(-1, -1, -1, -1), true);
+    simulateStep(root, grid, std::vector<Turn>(), -botColor, 0, basicDepthLimit);
 
     return maxTurn;
 }
@@ -223,7 +272,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     float max = -FLT_MAX, min = FLT_MAX;
 
     // 继续搜索
-    std::vector<Step> availableSteps = currentGrid.getAvailable(15);
+    std::vector<Step> availableSteps = currentGrid.getAvailable(topK / (turnCount + 1));
 
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
@@ -231,26 +280,34 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
             Step step1 = availableSteps[j];
 
             // this turn
-            Turn currentTurn(step0.x, step0.y, step1.x, step1.y);
+            Turn childTurn(step0.x, step0.y, step1.x, step1.y);
             // child node
-            auto* child = new GameNode(currentTurn, -(currentColor) != botColor, currentNode->alpha, currentNode->beta);
+            auto* child = new GameNode(childTurn, -(currentColor) != botColor, currentNode->alpha, currentNode->beta);
             // next grid
-            Grid nextGrid = currentGrid;
-            nextGrid.doStep(step0.x, step0.y, currentColor);
-            nextGrid.doStep(step1.x, step1.y, currentColor);
+            Grid childGrid = currentGrid;
+            childGrid.doStep(step0.x, step0.y, currentColor);
+            childGrid.doStep(step1.x, step1.y, currentColor);
             // new preTurns list
-            std::vector<Turn> newTurns = preTurns;
-            newTurns.push_back(currentTurn);
+            std::vector<Turn> childPreTurns = preTurns;
+            childPreTurns.push_back(childTurn);
+
+            // 第一手落子时，更新当前子树搜索深度限制
+            if (turnCount == 0) {
+                currentDepthLimit = basicDepthLimit + getDepthByWeight(currentGrid.weight[step0.x][step0.y], currentGrid.weight[step1.x][step1.y]);
+            }
 
             // 继续搜索
-            float childScore = simulateStep(child, nextGrid, newTurns, -(currentColor), turnCount + 1, currentDepthLimit);
+            float childScore = simulateStep(child, childGrid, childPreTurns, -(currentColor), turnCount + 1, currentDepthLimit);
 
             // 释放内存
             delete child; // 耗时操作
 
             // 分数反向传递 和 alpha-beta更新
             if (currentNode->isMaxNode) {
-                if (childScore > max) max = childScore;
+                if (childScore > max) {
+                    max = childScore;
+                    if (turnCount == 0) maxTurn = childTurn;
+                }
                 if (childScore > currentNode->beta) currentNode->beta = childScore;
             } else {
                 if (childScore < min) min = childScore;
@@ -363,18 +420,10 @@ float Bot::evaluate(Grid grid, Step step) {
         }
     }
 
-    float totalScore = currentColor * (pow(inLineCount, 7) + pow(inColumnCount, 7) + pow(inLeftDiagonalCount, 7) +
-                                       pow(inRightDiagonalCount, 7));
-
-//    std::cout << step.x << ", " << step.y << ": " << inLineCount << " " << inColumnCount << " " << inLeftDiagonalCount << " " << inRightDiagonalCount << std::endl;
+    float totalScore = currentColor * (pow(inLineCount, 11) + pow(inColumnCount, 11) + pow(inLeftDiagonalCount, 11) + pow(inRightDiagonalCount, 11));
 
     return totalScore;
 }
-
-
-
-
-
 
 
 
@@ -412,94 +461,6 @@ int inputGrid(Grid& grid, Bot& bot) {
     return turnId;
 }
 
-void Grid::doStep(int x, int y, Color color) {
-    if (x == -1) return;
-
-    if (data[x][y] == BLANK) {
-        data[x][y] = color;
-
-        // 内层
-        addWeight(x-1, y, 3);
-        addWeight(x+1, y, 3);
-        addWeight(x, y-1, 3);
-        addWeight(x, y+1, 3);
-        addWeight(x-1, y-1, 3);
-        addWeight(x-1, y+1, 3);
-        addWeight(x+1, y-1, 3);
-        addWeight(x+1, y+1, 3);
-        // 中层
-        addWeight(x-2, y, 2);
-        addWeight(x+2, y, 2);
-        addWeight(x, y-2, 2);
-        addWeight(x, y+2, 2);
-        addWeight(x-2, y-2, 2);
-        addWeight(x-2, y+2, 2);
-        addWeight(x+2, y-2, 2);
-        addWeight(x+2, y+2, 2);
-        // 外层
-        addWeight(x-3, y, 1);
-        addWeight(x+3, y, 1);
-        addWeight(x, y-3, 1);
-        addWeight(x, y+3, 1);
-        addWeight(x-3, y-3, 1);
-        addWeight(x-3, y+3, 1);
-        addWeight(x+3, y-3, 1);
-        addWeight(x+3, y+3, 1);
-    }
-}
-
-inline void Grid::addWeight(int x, int y, int addition) {
-    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return;
-
-    weight[x][y] += addition;
-}
-
-
-/**
- * 利用priority_queue从棋盘中选出前topK个（如果存在）的点位
- */
-std::vector<Step> Grid::getAvailable(const int topK) {
-    std::priority_queue<StepCandidate, std::vector<StepCandidate>, std::less<>> stepCandidates;
-    std::vector<Step> availableSteps;
-
-    for (int x=0; x<GRID_SIZE; x++) {
-        for (int y=0; y<GRID_SIZE; y++) {
-            if (data[x][y] != BLANK) continue;
-            if (weight[x][y] == 0) continue;
-
-            stepCandidates.push(
-                    StepCandidate(Step(x, y), weight[x][y])
-            );
-        }
-    }
-
-    for (int i=0; i<topK && !stepCandidates.empty(); i++) {
-        availableSteps.push_back(stepCandidates.top().step);
-        stepCandidates.pop();
-    }
-
-    return availableSteps;
-}
-
-
-void Grid::output() {
-    for (int x=0; x<GRID_SIZE; x++) {
-        for (int y=0; y<GRID_SIZE; y++) {
-//            std::cout << data[x][y] << " ";
-        }
-//        std::cout << std::endl;
-    }
-//    std::cout << std::endl;
-
-    for (int x=0; x<GRID_SIZE; x++) {
-        for (int y=0; y<GRID_SIZE; y++) {
-//            std::cout << weight[x][y] << " ";
-        }
-//        std::cout << std::endl;
-    }
-//    std::cout << std::endl;
-}
-
 int main() {
     struct timeval s_tv, e_tv;
 
@@ -512,19 +473,11 @@ int main() {
 
     gettimeofday(&s_tv, NULL);
 
-    // 调试输出
-//    std::cout << "make decision..." << std::endl;
-    grid.output();
-
     Turn result = bot.makeDecision(grid, turnId);
 
     gettimeofday(&e_tv, NULL);
 
-    std::cout <<result.x0<<' '<<result.y0<<' '<<result.x1<<' '<<result.y1<<std::endl;
-
-//    std::cout << "started at: " << s_tv.tv_sec << ", " << s_tv.tv_usec << std::endl;
-//    std::cout << "ended at: " << e_tv.tv_sec << ", " << e_tv.tv_usec << std::endl;
-//    std::cout << "sec: " << e_tv.tv_sec - s_tv.tv_sec << std::endl;
+    std::cout << result.x0 << ' ' << result.y0 << ' ' << result.x1 << ' ' << result.y1 << std::endl;
 
     return 0;
 }
