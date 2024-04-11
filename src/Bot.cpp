@@ -73,7 +73,7 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
             // turn
             Turn thisTurn = Turn(step0.x, step0.y, step1.x, step1.y);
             //
-            auto* child = new GameNode(thisTurn, true);
+            auto* child = new GameNode(thisTurn, false);
             firstTurnNodes.push_back(child);
             // grid
             Grid nextGrid = grid;
@@ -136,7 +136,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
             // this turn
             Turn currentTurn(step0.x, step0.y, step1.x, step1.y);
             // child node
-            auto* child = new GameNode(currentTurn, -(currentColor) == botColor, currentNode->alpha, currentNode->beta);
+            auto* child = new GameNode(currentTurn, -(currentColor) != botColor, currentNode->alpha, currentNode->beta);
             // next grid
             Grid nextGrid = currentGrid;
             nextGrid.doStep(step0.x, step0.y, currentColor);

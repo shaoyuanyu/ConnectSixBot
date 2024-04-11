@@ -151,7 +151,7 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
     // 获取可选落子点2
-    std::vector<Step> availableSteps = grid.getAvailable(25);
+    std::vector<Step> availableSteps = grid.getAvailable(20);
 
     // 调试输出
     for (Step availableStep: availableSteps) {
@@ -170,7 +170,7 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
             // turn
             Turn thisTurn = Turn(step0.x, step0.y, step1.x, step1.y);
             //
-            auto* child = new GameNode(thisTurn, true);
+            auto* child = new GameNode(thisTurn, false);
             firstTurnNodes.push_back(child);
             // grid
             Grid nextGrid = grid;
@@ -223,7 +223,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     float max = -FLT_MAX, min = FLT_MAX;
 
     // 继续搜索
-    std::vector<Step> availableSteps = currentGrid.getAvailable(25/turnCount);
+    std::vector<Step> availableSteps = currentGrid.getAvailable(15);
 
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
@@ -233,7 +233,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
             // this turn
             Turn currentTurn(step0.x, step0.y, step1.x, step1.y);
             // child node
-            auto* child = new GameNode(currentTurn, -(currentColor) == botColor, currentNode->alpha, currentNode->beta);
+            auto* child = new GameNode(currentTurn, -(currentColor) != botColor, currentNode->alpha, currentNode->beta);
             // next grid
             Grid nextGrid = currentGrid;
             nextGrid.doStep(step0.x, step0.y, currentColor);
