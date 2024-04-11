@@ -16,6 +16,9 @@ class Bot {
 private:
     Color botColor;
     int basicDepthLimit = 1; // 每次推理深度
+    int topK = 20;
+
+    Turn maxTurn;
 
     std::vector<GameNode*> firstTurnNodes;
 
