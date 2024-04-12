@@ -79,33 +79,17 @@ void Grid::doStep(int x, int y, Color color) {
     if (data[x][y] == BLANK) {
         data[x][y] = color;
 
-        // 内层
-        addWeight(x-1, y, 3);
-        addWeight(x+1, y, 3);
-        addWeight(x, y-1, 3);
-        addWeight(x, y+1, 3);
-        addWeight(x-1, y-1, 3);
-        addWeight(x-1, y+1, 3);
-        addWeight(x+1, y-1, 3);
-        addWeight(x+1, y+1, 3);
-        // 中层
-        addWeight(x-2, y, 2);
-        addWeight(x+2, y, 2);
-        addWeight(x, y-2, 2);
-        addWeight(x, y+2, 2);
-        addWeight(x-2, y-2, 2);
-        addWeight(x-2, y+2, 2);
-        addWeight(x+2, y-2, 2);
-        addWeight(x+2, y+2, 2);
-        // 外层
-        addWeight(x-3, y, 1);
-        addWeight(x+3, y, 1);
-        addWeight(x, y-3, 1);
-        addWeight(x, y+3, 1);
-        addWeight(x-3, y-3, 1);
-        addWeight(x-3, y+3, 1);
-        addWeight(x+3, y-3, 1);
-        addWeight(x+3, y+3, 1);
+        for (int i=1; i<=5; i++) {
+            int w = 6 - i;
+            addWeight(x-i, y, w);
+            addWeight(x+i, y, w);
+            addWeight(x, y-i, w);
+            addWeight(x, y+i, w);
+            addWeight(x-i, y-i, w);
+            addWeight(x-i, y+i, w);
+            addWeight(x+i, y-i, w);
+            addWeight(x+i, y+i, w);
+        }
     }
 }
 
@@ -177,7 +161,7 @@ struct GameNode {
 class Bot {
 private:
     Color botColor;
-    int basicDepthLimit = 1; // 每次推理深度
+    int basicDepthLimit = 2; // 每次推理深度
     int topK = 20;
 
     Turn maxTurn = Turn(-1, -1, -1, -1);
@@ -187,7 +171,8 @@ private:
     Turn makeOpening();
     inline int getDepthByWeight(int weight0, int weight1);
     float simulateStep(GameNode*& currentRoot, Grid& currentGrid, const std::vector<Turn>& preTurns, Color currentColor, int turnCount, int currentDepthLimit);
-    float evaluate(Grid grid, Step step);
+    float evaluate(Grid& grid, Step step, Color currentColor);
+    float evaluateForColor(Grid& grid, Step& step, Color currentColor);
     inline bool count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count);
 
 public:
@@ -228,11 +213,8 @@ inline int Bot::getDepthByWeight(int weight0, int weight1) {
 //    int averageWeight = (weight0 + weight1) / 2;
     int averageWeight = (weight0 < weight1) ? weight0 : weight1;
 
-    if (averageWeight <= 2) return 0;
-    else if (averageWeight <= 6) return 1;
-    else if (averageWeight <= 12) return 2;
-    else if (averageWeight <= 15) return 3;
-
+    if (averageWeight <= 6) return 0;
+    else if (averageWeight <= 12) return 1;
     return 2;
 }
 
@@ -261,8 +243,8 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     // 若搜索深度触底，终止搜索，进行评估
     if (turnCount == currentDepthLimit) {
         for (Turn preTurn: preTurns) {
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x0, preTurn.y0));
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x1, preTurn.y1));
+            currentNode->score += evaluate(currentGrid, Step(preTurn.x0, preTurn.y0), currentColor);
+            currentNode->score += evaluate(currentGrid, Step(preTurn.x1, preTurn.y1), currentColor);
         }
 
         return currentNode->score;
@@ -272,7 +254,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     float max = -FLT_MAX, min = FLT_MAX;
 
     // 继续搜索
-    std::vector<Step> availableSteps = currentGrid.getAvailable(topK / (turnCount + 1));
+    std::vector<Step> availableSteps = currentGrid.getAvailable(topK);
 
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
@@ -298,6 +280,12 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
 
             // 继续搜索
             float childScore = simulateStep(child, childGrid, childPreTurns, -(currentColor), turnCount + 1, currentDepthLimit);
+
+            // 调试输出
+//            std::cout << "(" << child->turn.x0 << ", " << child->turn.y0 << ")" << ", (" << child->turn.x1 << ", " << child->turn.y1 << ")" << std::endl;
+//            std::cout << "score: " << childScore << std::endl;
+//            std::cout << "depth: " << currentDepthLimit << std::endl;
+//            std::cout << std::endl;
 
             // 释放内存
             delete child; // 耗时操作
@@ -327,34 +315,19 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     return currentNode->score;
 }
 
-
 /**
- * 计数，同色+1,异色-1并终止，空位记为0.2
+ * 评估函数
  */
-inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count) {
-    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return false;
-
-    if (grid.data[x][y] == currentColor) {
-        // 同色
-        count += 1;
-    } else if (grid.data[x][y] == -currentColor) {
-        // 遇异色终止计数
-        count += -1;
-        return false;
-    } else {
-        // 空位记为0.2
-        count += 0.2;
-    }
-
-    return true;
+float Bot::evaluate(Grid& grid, Step step, Color currentColor) {
+    return evaluateForColor(grid, step, currentColor) - evaluateForColor(grid, step, -currentColor);
 }
 
 
 /**
- * 评估函数
+ * 评估指定点位为指定颜色时的分值
  */
-float Bot::evaluate(Grid grid, Step step) {
-    Color currentColor = grid.data[step.x][step.y];
+float Bot::evaluateForColor(Grid& grid, Step& step, Color currentColor) {
+//    Color currentColor = grid.data[step.x][step.y];
     int x, y;
     float inLineCount = 1, inColumnCount = 1, inLeftDiagonalCount = 1, inRightDiagonalCount = 1;
     bool isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
@@ -420,9 +393,30 @@ float Bot::evaluate(Grid grid, Step step) {
         }
     }
 
-    float totalScore = currentColor * (pow(inLineCount, 11) + pow(inColumnCount, 11) + pow(inLeftDiagonalCount, 11) + pow(inRightDiagonalCount, 11));
+    float totalScore = currentColor * (pow(inLineCount, 19) + pow(inColumnCount, 19) + pow(inLeftDiagonalCount, 19) + pow(inRightDiagonalCount, 19));
 
     return totalScore;
+}
+
+/**
+ * 计数，同色+1,异色-1并终止，空位记为0.2
+ */
+inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count) {
+    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return false;
+
+    if (grid.data[x][y] == currentColor) {
+        // 同色
+        count += 1;
+    } else if (grid.data[x][y] == -currentColor) {
+        // 遇异色终止计数
+//        count += -1;
+        return false;
+    } else {
+        // 空位记为0.2
+//        count += 0.2;
+    }
+
+    return true;
 }
 
 

@@ -15,7 +15,7 @@
 class Bot {
 private:
     Color botColor;
-    int basicDepthLimit = 1; // 每次推理深度
+    int basicDepthLimit = 2; // 每次推理深度
     int topK = 20;
 
     Turn maxTurn = Turn(-1, -1, -1, -1);
@@ -25,7 +25,8 @@ private:
     Turn makeOpening();
     inline int getDepthByWeight(int weight0, int weight1);
     float simulateStep(GameNode*& currentRoot, Grid& currentGrid, const std::vector<Turn>& preTurns, Color currentColor, int turnCount, int currentDepthLimit);
-    float evaluate(Grid grid, Step step);
+    float evaluate(Grid& grid, Step step, Color currentColor);
+    float evaluateForColor(Grid& grid, Step& step, Color currentColor);
     inline bool count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count);
 
 public:

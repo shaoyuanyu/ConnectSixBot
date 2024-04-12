@@ -37,11 +37,9 @@ inline int Bot::getDepthByWeight(int weight0, int weight1) {
 //    int averageWeight = (weight0 + weight1) / 2;
     int averageWeight = (weight0 < weight1) ? weight0 : weight1;
 
-    if (averageWeight <= 1) return 0;
-    else if (averageWeight <= 2) return 1;
-    else if (averageWeight <= 4) return 2;
-    else if (averageWeight <= 6) return 3;
-    return 3;
+    if (averageWeight <= 6) return 0;
+    else if (averageWeight <= 12) return 1;
+    return 2;
 }
 
 
@@ -69,8 +67,8 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     // 若搜索深度触底，终止搜索，进行评估
     if (turnCount == currentDepthLimit) {
         for (Turn preTurn: preTurns) {
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x0, preTurn.y0));
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x1, preTurn.y1));
+            currentNode->score += evaluate(currentGrid, Step(preTurn.x0, preTurn.y0), currentColor);
+            currentNode->score += evaluate(currentGrid, Step(preTurn.x1, preTurn.y1), currentColor);
         }
 
         return currentNode->score;
@@ -80,7 +78,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     float max = -FLT_MAX, min = FLT_MAX;
 
     // 继续搜索
-    std::vector<Step> availableSteps = currentGrid.getAvailable(topK / (turnCount + 1));
+    std::vector<Step> availableSteps = currentGrid.getAvailable(topK);
 
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
@@ -141,36 +139,21 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     return currentNode->score;
 }
 
-
 /**
- * 计数，同色+1,异色-1并终止，空位记为0.2
+ * 评估函数
  */
-inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count) {
-    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return false;
-
-    if (grid.data[x][y] == currentColor) {
-        // 同色
-        count += 1;
-    } else if (grid.data[x][y] == -currentColor) {
-        // 遇异色终止计数
-        count += -1;
-        return false;
-    } else {
-        // 空位记为0.2
-        count += 0.2;
-    }
-
-    return true;
+float Bot::evaluate(Grid& grid, Step step, Color currentColor) {
+    return evaluateForColor(grid, step, currentColor) - evaluateForColor(grid, step, -currentColor);
 }
 
 
 /**
- * 评估函数
+ * 评估指定点位为指定颜色时的分值
  */
-float Bot::evaluate(Grid grid, Step step) {
-    Color currentColor = grid.data[step.x][step.y];
+float Bot::evaluateForColor(Grid& grid, Step& step, Color currentColor) {
+//    Color currentColor = grid.data[step.x][step.y];
     int x, y;
-    float inLineCount = 0, inColumnCount = 0, inLeftDiagonalCount = 0, inRightDiagonalCount = 0;
+    float inLineCount = 1, inColumnCount = 1, inLeftDiagonalCount = 1, inRightDiagonalCount = 1;
     bool isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
 
     for (int shift = -1; shift >= -5; shift--) {
@@ -234,7 +217,29 @@ float Bot::evaluate(Grid grid, Step step) {
         }
     }
 
-    float totalScore = currentColor * (pow(inLineCount, 11) + pow(inColumnCount, 11) + pow(inLeftDiagonalCount, 11) + pow(inRightDiagonalCount, 11));
+    float totalScore = currentColor * (pow(inLineCount, 19) + pow(inColumnCount, 19) + pow(inLeftDiagonalCount, 19) + pow(inRightDiagonalCount, 19));
 
     return totalScore;
+}
+
+
+/**
+ * 计数，同色+1,异色-1并终止，空位记为0.2
+ */
+inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count) {
+    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return false;
+
+    if (grid.data[x][y] == currentColor) {
+        // 同色
+        count += 1;
+    } else if (grid.data[x][y] == -currentColor) {
+        // 遇异色终止计数
+//        count += -1;
+        return false;
+    } else {
+        // 空位记为0.2
+//        count += 0.2;
+    }
+
+    return true;
 }
