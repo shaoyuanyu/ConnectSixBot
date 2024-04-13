@@ -1,5 +1,5 @@
 //
-// Created by ysy on 24-4-9.
+// 博弈树节点
 //
 
 #ifndef CONNECT_SIX_BOT_GAME_NODE_H

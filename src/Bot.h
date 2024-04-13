@@ -1,6 +1,5 @@
 //
-// ysy
-// 2024/3/29
+// 基于博弈树的智能体
 //
 
 #ifndef CONNECT_SIX_BOT_BOT_H
@@ -15,8 +14,7 @@
 class Bot {
 private:
     Color botColor;
-    int basicDepthLimit = 2; // 每次推理深度
-    int topK = 20;
+    int depthLimit = 3; // 每次推理深度
 
     Turn maxTurn = Turn(-1, -1, -1, -1);
 
@@ -24,7 +22,7 @@ private:
 
     Turn makeOpening();
     inline int getDepthByWeight(int weight0, int weight1);
-    float simulateStep(GameNode*& currentRoot, Grid& currentGrid, const std::vector<Turn>& preTurns, Color currentColor, int turnCount, int currentDepthLimit);
+    float simulateStep(GameNode*& currentRoot, Grid& currentGrid, const std::vector<Turn>& preTurns, Color currentColor, int turnCount);
     float evaluate(Grid& grid, Step step, Color currentColor);
     float evaluateForColor(Grid& grid, Step& step, Color currentColor);
     inline bool count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count);

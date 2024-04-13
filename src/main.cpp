@@ -1,6 +1,5 @@
 //
-// ysy
-// 2024/3/29
+// 六子棋
 //
 
 #include <iostream>

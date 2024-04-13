@@ -1,6 +1,5 @@
 //
-// ysy
-// 2024/3/29
+// 全局配置
 //
 
 #ifndef CONNECT_SIX_BOT_GAME_CONFIG_H
