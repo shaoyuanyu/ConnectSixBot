@@ -1,4 +1,5 @@
 #include "Bot.h"
+#include "Evaluator.h"
 #include <iostream>
 #include <cmath>
 
@@ -49,8 +50,7 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     // 若搜索深度触底，终止搜索，进行评估
     if (turnCount == depthLimit) {
         for (Turn preTurn: preTurns) {
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x0, preTurn.y0), currentColor);
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x1, preTurn.y1), currentColor);
+            currentNode->score += evaluate(currentGrid, preTurn, currentColor);
         }
 
         // 调试输出
@@ -119,104 +119,6 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
 /**
  * 评估函数
  */
-float Bot::evaluate(Grid& grid, Step step, Color currentColor) {
-    return evaluateForColor(grid, step, currentColor) - evaluateForColor(grid, step, -currentColor);
-}
-
-
-/**
- * 评估指定点位为指定颜色时的分值
- */
-float Bot::evaluateForColor(Grid& grid, Step& step, Color currentColor) {
-//    Color currentColor = grid.data[step.x][step.y];
-    int x, y;
-    float inLineCount = 1, inColumnCount = 1, inLeftDiagonalCount = 1, inRightDiagonalCount = 1;
-    bool isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
-
-    for (int shift = -1; shift >= -5; shift--) {
-        // 行
-        if (isLineUnbroken) {
-            x = step.x;
-            y = step.y + shift;
-            isLineUnbroken = count(grid, x, y, currentColor, inLineCount);
-        }
-
-        // 列
-        if (isColumnUnbroken) {
-            x = step.x + shift;
-            y = step.y;
-            isColumnUnbroken = count(grid, x, y, currentColor, inColumnCount);
-        }
-
-        // 左对角线
-        if (isLeftDiagonalUnbroken) {
-            x = step.x + shift;
-            y = step.y + shift;
-            isLeftDiagonalUnbroken = count(grid, x, y, currentColor, inLeftDiagonalCount);
-        }
-
-        // 右对角线
-        if (isRightDiagonalUnbroken) {
-            x = step.x - shift;
-            y = step.y - shift;
-            isRightDiagonalUnbroken = count(grid, x, y, currentColor, inRightDiagonalCount);
-        }
-    }
-
-    isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
-    for (int shift = 1; shift <= 5; shift++) {
-        // 行
-        if (isLineUnbroken) {
-            x = step.x;
-            y = step.y + shift;
-            isLineUnbroken = count(grid, x, y, currentColor, inLineCount);
-        }
-
-        // 列
-        if (isColumnUnbroken) {
-            x = step.x + shift;
-            y = step.y;
-            isColumnUnbroken = count(grid, x, y, currentColor, inColumnCount);
-        }
-
-        // 左对角线
-        if (isLeftDiagonalUnbroken) {
-            x = step.x + shift;
-            y = step.y + shift;
-            isLeftDiagonalUnbroken = count(grid, x, y, currentColor, inLeftDiagonalCount);
-        }
-
-        // 右对角线
-        if (isRightDiagonalUnbroken) {
-            x = step.x - shift;
-            y = step.y - shift;
-            isRightDiagonalUnbroken = count(grid, x, y, currentColor, inRightDiagonalCount);
-        }
-    }
-
-    float totalScore = currentColor * (pow(inLineCount, 19) + pow(inColumnCount, 19) + pow(inLeftDiagonalCount, 19) + pow(inRightDiagonalCount, 19));
-
-    return totalScore;
-}
-
-
-/**
- * 计数，同色+1,异色-1并终止，空位记为0.2
- */
-inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count) {
-    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return false;
-
-    if (grid.data[x][y] == currentColor) {
-        // 同色
-        count += 1;
-    } else if (grid.data[x][y] == -currentColor) {
-        // 遇异色终止计数
-//        count += -1;
-        return false;
-    } else {
-        // 空位记为0.2
-//        count += 0.2;
-    }
-
-    return true;
+float Bot::evaluate(Grid& grid, Turn move, Color currentColor) {
+    return Evaluator(currentColor, grid).evaluate(move);
 }

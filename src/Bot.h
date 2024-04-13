@@ -21,11 +21,8 @@ private:
     std::vector<GameNode*> firstTurnNodes;
 
     Turn makeOpening();
-    inline int getDepthByWeight(int weight0, int weight1);
     float simulateStep(GameNode*& currentRoot, Grid& currentGrid, const std::vector<Turn>& preTurns, Color currentColor, int turnCount);
-    float evaluate(Grid& grid, Step step, Color currentColor);
-    float evaluateForColor(Grid& grid, Step& step, Color currentColor);
-    inline bool count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count);
+    float evaluate(Grid& grid, Turn move, Color currentColor);
 
 public:
     void setColor(Color c);

@@ -10,4 +10,6 @@ add_executable(
         src/Bot.cpp src/Bot.h
         src/Grid.cpp src/Grid.h
         src/GameNode.h
+        src/Evaluator.cpp
+        src/Evaluator.h
 )
