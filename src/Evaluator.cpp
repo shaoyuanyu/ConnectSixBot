@@ -1,6 +1,9 @@
 #include "Evaluator.h"
 
-Evaluator::Evaluator(Color botColor, Grid grid): currentColor(botColor), grid(grid) {
+/**
+ * Evaluator构造方法
+ */
+Evaluator::Evaluator() {
     //防守型
     scoreOfMyRoad[0][1] = 1;
     scoreOfMyRoad[0][2] = 5;
@@ -30,12 +33,24 @@ Evaluator::Evaluator(Color botColor, Grid grid): currentColor(botColor), grid(gr
     scoreOfEnemyRoad[1][6] = 10000;
 }
 
+
+/**
+ *
+ */
+void Evaluator::init(Color givenColor, Grid givenGrid) {
+    //
+    currentColor = givenColor;
+    grid = givenGrid;
+
+    // 全局扫描并计算baseScore
+    baseScore = calScore();
+}
+
+
 /**
  * 所下棋子的价值：下棋后局面分数 - 下棋前局面分数
  */
 int Evaluator::evaluate(Turn move) {
-    baseScore = calScore();
-
     int fScore = calScore(move);
 
     grid.doStep(move.x0, move.y0, currentColor);
@@ -43,8 +58,12 @@ int Evaluator::evaluate(Turn move) {
 
     int bScore = calScore(move);
 
+    grid.undoStep(move.x0, move.y0);
+    grid.undoStep(move.x1, move.y1);
+
     return bScore - fScore;
 }
+
 
 /**
  * 计数
@@ -87,9 +106,9 @@ int Evaluator::calScore() {
     std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
     std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
     
-    if (baseScore > ALERT_SCORE) {
-        condition = 1;
-    }
+//    if (baseScore > ALERT_SCORE) {
+//        condition = 1;
+//    }
 
     // 纵向扫描
     for (int x=0; x<GRID_SIZE-5; x++) {
@@ -172,20 +191,6 @@ int Evaluator::calScore(Turn move) {
         updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
     }
     // 右下对角扫描
-    for (int x=x0-5, y=y0+5; (x<GRID_SIZE-5 && x<=x0) && (y>=y0); x++, y--) {
-        if (x < 0 || y > GRID_SIZE) continue;
-
-        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
-        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
-    }
-    for (int x=x1-5, y=y1+5; (x<GRID_SIZE-5 && x<=x1) && (y>=y1); x++, y--) {
-        if (x < 0 || y > GRID_SIZE) continue;
-        if ((x == x0 && y == y0) || (x + 1 == x0 && y - 1 == y0) || (x + 2 == x0 && y - 2 == y0)|| (x + 3 == x0 && y - 3 == y0) || (x + 4 == x0 && y - 4 == y0) || (x + 5 == x0 && y - 5 == y0)) continue; // 跳过重复扫描
-
-        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
-        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
-    }
-    // 左下对角扫描
     for (int x=x0-5, y=y0-5; (x<GRID_SIZE-5 && x<=x0) && (y<GRID_SIZE-5 && y<=y0); x++, y++) {
         if (x < 0 || y < 0) continue;
 
@@ -199,8 +204,72 @@ int Evaluator::calScore(Turn move) {
         int count = getCount(x, y) + getCount(x + 1, y + 1) + + getCount(x + 2, y + 2) + + getCount(x + 3, y + 3) + + getCount(x + 4, y + 4) + + getCount(x + 5, y + 5);
         updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
     }
+    // 左下对角扫描
+    for (int x=x0-5, y=y0+5; (x<GRID_SIZE-5 && x<=x0) && (y>=y0); x++, y--) {
+        if (x < 0 || y > GRID_SIZE) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    for (int x=x1-5, y=y1+5; (x<GRID_SIZE-5 && x<=x1) && (y>=y1); x++, y--) {
+        if (x < 0 || y > GRID_SIZE) continue;
+        if ((x == x0 && y == y0) || (x + 1 == x0 && y - 1 == y0) || (x + 2 == x0 && y - 2 == y0)|| (x + 3 == x0 && y - 3 == y0) || (x + 4 == x0 && y - 4 == y0) || (x + 5 == x0 && y - 5 == y0)) continue; // 跳过重复扫描
+
+        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
 
     //
+    for(int i = 1; i < 7; i++) {
+        score += (countOfMyRoad[i] * scoreOfMyRoad[condition][i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[condition][i]);
+    }
+
+    return score;
+}
+
+
+/**
+ * 预评估
+ */
+int Evaluator::preEvaluate(Step step) {
+    int score = 0;
+    int condition = 0; // condition用于表示进攻型还是防守型, 1进攻, 0防守
+    std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
+    std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
+
+    if (baseScore > ALERT_SCORE) {
+        condition = 1;
+    }
+
+    // 纵向扫描
+    for (int x=step.x-5, y=step.y; x<GRID_SIZE-6 && x<=step.x; x++) {
+        if (x < 0) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y) + getCount(x + 2, y) + getCount(x + 3, y) + getCount(x + 4, y) + getCount(x + 5, y);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 横向扫描
+    for (int x=step.x, y=step.y-5; y<GRID_SIZE-5 && y<=step.y; y++) {
+        if (y < 0) continue;
+
+        int count = getCount(x, y) + getCount(x, y + 1) + getCount(x, y + 2) + getCount(x, y + 3) + getCount(x, y + 4) + getCount(x, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 右下对角扫描
+    for (int x=step.x-5, y=step.y-5; (x<GRID_SIZE-5 && x<=step.x) && (y<GRID_SIZE-5 && y<=step.y); x++, y++) {
+        if (x < 0 || y < 0) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y + 1) + + getCount(x + 2, y + 2) + + getCount(x + 3, y + 3) + + getCount(x + 4, y + 4) + + getCount(x + 5, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 左下对角扫描
+    for (int x=step.x-5, y=step.y+5; (x<GRID_SIZE-5 && x<=step.x) && (y>=step.y); x++, y--) {
+        if (x < 0 || y > GRID_SIZE) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+
     for(int i = 1; i < 7; i++) {
         score += (countOfMyRoad[i] * scoreOfMyRoad[condition][i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[condition][i]);
     }

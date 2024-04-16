@@ -13,6 +13,8 @@ struct Grid {
     Color data[GRID_SIZE][GRID_SIZE] = { BLANK };
 
     void doStep(int x, int y, Color color);
+    void undoStep(int x, int y);
+    std::vector<Step> getAll();
     std::vector<Step> getAvailable();
     void output();
 };

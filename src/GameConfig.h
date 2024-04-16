@@ -25,7 +25,13 @@ struct Step {
     int x;
     int y;
 
+    int weight = 0;
+
     Step(int x, int y): x(x), y(y) {}
+
+    bool operator<(const Step& other) const {
+        return weight < other.weight;
+    }
 };
 
 /**

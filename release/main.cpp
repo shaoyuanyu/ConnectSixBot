@@ -1,11 +1,16 @@
+//
+// 六子棋
+//
+
 #include <iostream>
 #include <sys/time.h>
 #include <vector>
 #include <cfloat>
-#include <cmath>
+#include <climits>
 #include <queue>
 
 
+// config
 /**
  * 棋盘
  */
@@ -26,7 +31,13 @@ struct Step {
     int x;
     int y;
 
+    int weight = 0;
+
     Step(int x, int y): x(x), y(y) {}
+
+    bool operator<(const Step& other) const {
+        return weight < other.weight;
+    }
 };
 
 /**
@@ -41,35 +52,15 @@ struct Turn {
 };
 
 
+// grid
 struct Grid {
     Color data[GRID_SIZE][GRID_SIZE] = { BLANK };
-    int weight[GRID_SIZE][GRID_SIZE] = { 0 };
 
     void doStep(int x, int y, Color color);
-    inline void addWeight(int x, int y, int addition);
-
-    std::vector<Step> getAvailable(int topK);
-
+    void undoStep(int x, int y);
+    std::vector<Step> getAll();
+    std::vector<Step> getAvailable();
     void output();
-};
-
-
-/**
- * 用于候选位置的排序
- */
-struct StepCandidate {
-    Step step;
-    int weight;
-
-    StepCandidate(Step step, int weight): step(step), weight(weight) {}
-
-    bool operator<(const StepCandidate& other) {
-        if (weight == other.weight) {
-            // 如果权重相等则倾向居中的位置
-            return pow(step.x-7, 2) + pow(step.y-7, 2) > pow(other.step.x-7, 2) + pow(other.step.y-7, 2);
-        }
-        return weight < other.weight;
-    }
 };
 
 
@@ -78,74 +69,30 @@ void Grid::doStep(int x, int y, Color color) {
 
     if (data[x][y] == BLANK) {
         data[x][y] = color;
-
-        for (int i=1; i<=5; i++) {
-            int w = 6 - i;
-            addWeight(x-i, y, w);
-            addWeight(x+i, y, w);
-            addWeight(x, y-i, w);
-            addWeight(x, y+i, w);
-            addWeight(x-i, y-i, w);
-            addWeight(x-i, y+i, w);
-            addWeight(x+i, y-i, w);
-            addWeight(x+i, y+i, w);
-        }
     }
 }
 
-inline void Grid::addWeight(int x, int y, int addition) {
-    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return;
 
-    weight[x][y] += addition;
+void Grid::undoStep(int x, int y) {
+    data[x][y] = BLANK;
 }
 
 
-/**
- * 利用priority_queue从棋盘中选出前topK个（如果存在）的点位
- */
-std::vector<Step> Grid::getAvailable(const int topK) {
-    std::priority_queue<StepCandidate, std::vector<StepCandidate>, std::less<>> stepCandidates;
+std::vector<Step> Grid::getAll() {
     std::vector<Step> availableSteps;
 
     for (int x=0; x<GRID_SIZE; x++) {
         for (int y=0; y<GRID_SIZE; y++) {
             if (data[x][y] != BLANK) continue;
-            if (weight[x][y] == 0) continue;
-
-            stepCandidates.push(
-                    StepCandidate(Step(x, y), weight[x][y])
-            );
+            availableSteps.emplace_back(x, y);
         }
-    }
-
-    for (int i=0; i<topK && !stepCandidates.empty(); i++) {
-        availableSteps.push_back(stepCandidates.top().step);
-        stepCandidates.pop();
     }
 
     return availableSteps;
 }
 
 
-void Grid::output() {
-    for (int x=0; x<GRID_SIZE; x++) {
-        for (int y=0; y<GRID_SIZE; y++) {
-            std::cout << data[x][y] << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-
-    for (int x=0; x<GRID_SIZE; x++) {
-        for (int y=0; y<GRID_SIZE; y++) {
-            std::cout << weight[x][y] << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-}
-
-
+// game node
 struct GameNode {
     float score = 0.0;
     Turn turn; // 一回合，两手落子
@@ -155,25 +102,326 @@ struct GameNode {
 
     GameNode(Turn turn, bool isMaxNode): turn(turn), isMaxNode(isMaxNode) {}
     GameNode(Turn turn, bool isMaxNode, float alpha, float beta): turn(turn), isMaxNode(isMaxNode), alpha(alpha), beta(beta) {}
+
+    bool operator<(const GameNode& other) const;
 };
 
 
+// evaluator
+class Evaluator {
+private:
+    Color currentColor;
+    Grid grid;
+    const int ALERT_SCORE = 9;
+    int baseScore = INT_MIN;
+
+    std::vector<std::vector<int>> scoreOfMyRoad = std::vector<std::vector<int>>(2, std::vector<int>(10));
+    std::vector<std::vector<int>> scoreOfEnemyRoad = std::vector<std::vector<int>>(2, std::vector<int>(10));
+
+    int calScore();
+    int calScore(Turn move);
+    inline int getCount(int x, int y);
+    inline void updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const;
+
+public:
+    Evaluator();
+    void init(Color currentColor, Grid grid);
+    int evaluate(Turn move);
+    int preEvaluate(Step step);
+};
+
+
+/**
+ * Evaluator构造方法
+ */
+Evaluator::Evaluator() {
+    //防守型
+    scoreOfMyRoad[0][1] = 1;
+    scoreOfMyRoad[0][2] = 5;
+    scoreOfMyRoad[0][3] = 10;
+    scoreOfMyRoad[0][4] = 25;
+    scoreOfMyRoad[0][5] = 25;
+    scoreOfMyRoad[0][6] = 10000;
+    scoreOfEnemyRoad[0][1] = 1;
+    scoreOfEnemyRoad[0][2] = 5;
+    scoreOfEnemyRoad[0][3] = 15;
+    scoreOfEnemyRoad[0][4] = 35;
+    scoreOfEnemyRoad[0][5] = 25;
+    scoreOfEnemyRoad[0][6] = 10000;
+
+    //进攻型
+    scoreOfMyRoad[1][1] = 1;
+    scoreOfMyRoad[1][2] = 15;
+    scoreOfMyRoad[1][3] = 30;
+    scoreOfMyRoad[1][4] = 50;
+    scoreOfMyRoad[1][5] = 50;
+    scoreOfMyRoad[1][6] = 10000;
+    scoreOfEnemyRoad[1][1] = 1;
+    scoreOfEnemyRoad[1][2] = 10;
+    scoreOfEnemyRoad[1][3] = 15;
+    scoreOfEnemyRoad[1][4] = 35;
+    scoreOfEnemyRoad[1][5] = 25;
+    scoreOfEnemyRoad[1][6] = 10000;
+}
+
+
+/**
+ *
+ */
+void Evaluator::init(Color givenColor, Grid givenGrid) {
+    //
+    currentColor = givenColor;
+    grid = givenGrid;
+
+    // 全局扫描并计算baseScore
+    baseScore = calScore();
+}
+
+
+/**
+ * 所下棋子的价值：下棋后局面分数 - 下棋前局面分数
+ */
+int Evaluator::evaluate(Turn move) {
+    int fScore = calScore(move);
+
+    grid.doStep(move.x0, move.y0, currentColor);
+    grid.doStep(move.x1, move.y1, currentColor);
+
+    int bScore = calScore(move);
+
+    grid.undoStep(move.x0, move.y0);
+    grid.undoStep(move.x1, move.y1);
+
+    return bScore - fScore;
+}
+
+
+/**
+ * 计数
+ * 黑棋加一分，白棋加7分
+ */
+inline int Evaluator::getCount(int x, int y) {
+    return (grid.data[x][y] == WHITE) ? 7 : grid.data[x][y];
+}
+
+
+/**
+ * 更新不同路类型的数量
+ */
+inline void Evaluator::updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const {
+    // 没棋 或 黑白混杂
+    if (count == 0 || (count > 6 && count % 7 != 0)) return;
+
+    if (count < 7) {
+        if (currentColor == BLACK) {
+            countOfMyRoad[count]++;
+        } else {
+            countOfEnemyRoad[count]++;
+        }
+    } else {
+        if (currentColor == BLACK) {
+            countOfEnemyRoad[count/7]++;
+        } else {
+            countOfMyRoad[count/7]++;
+        }
+    }
+}
+
+
+/**
+ * 计算此时局面的总分数，得到baseScore(全局扫描)
+ */
+int Evaluator::calScore() {
+    int score = 0;
+    int condition = 0; // condition用于表示进攻型还是防守型, 1进攻, 0防守
+    std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
+    std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
+
+    // 纵向扫描
+    for (int x=0; x<GRID_SIZE-5; x++) {
+        for (int y=0; y<GRID_SIZE; y++) {
+            int count = getCount(x, y) + getCount(x + 1, y) + getCount(x + 2, y) + getCount(x + 3, y) + getCount(x + 4, y) + getCount(x + 5, y);
+            updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+        }
+    }
+    // 横向扫描
+    for (int x=0; x<GRID_SIZE; x++) {
+        for (int y=0; y<GRID_SIZE-5; y++) {
+            int count = getCount(x, y) + getCount(x, y + 1) + getCount(x, y + 2) + getCount(x, y + 3) + getCount(x, y + 4) + getCount(x, y + 5);
+            updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+        }
+    }
+    // 右下对角扫描
+    for (int x=0; x<GRID_SIZE-5; x++) {
+        for (int y=0; y<GRID_SIZE-5; y++) {
+            int count = getCount(x, y) + getCount(x + 1, y + 1) + getCount(x + 2, y + 2) + getCount(x + 3, y + 3) + getCount(x + 4, y + 4) + getCount(x + 5, y + 5);
+            updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+        }
+    }
+    // 左下对角扫描
+    for (int x=0; x<GRID_SIZE-5; x++) {
+        for (int y=5; y<GRID_SIZE; y++) {
+            int count = getCount(x, y) + getCount(x + 1, y - 1) + getCount(x + 2, y - 2) + getCount(x + 3, y - 3) + getCount(x + 4, y - 4) + getCount(x + 5, y - 5);
+            updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+        }
+    }
+
+    //
+    for (int i=1; i<=6; i++) {
+        score += (countOfMyRoad[i] * scoreOfMyRoad[condition][i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[condition][i]);
+    }
+
+    return score;
+}
+
+
+/**
+ * 计算此时局面的总分数(局部扫描)
+ */
+int Evaluator::calScore(Turn move) {
+    int score = 0;
+    int condition = 0; // condition用于表示进攻型还是防守型, 1进攻, 0防守
+    int x0 = move.x0, y0 = move.y0, x1 = move.x1, y1 = move.y1;
+    std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
+    std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
+
+    if (baseScore > ALERT_SCORE) {
+        condition = 1;
+    }
+
+    // 纵向扫描
+    for (int x=x0-5, y=y0; x<GRID_SIZE-5 && x<=x0; x++) {
+        if (x < 0) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y) + getCount(x + 2, y) + getCount(x + 3, y) + getCount(x + 4, y) + getCount(x + 5, y);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    for (int x=x1-5, y=y1; x<GRID_SIZE-5 && x<=x1; x++) {
+        if (x < 0) continue;
+        if (x == x0 || x + 1 == x0 || x + 2 == x0 || x + 3 == x0 || x + 4 == x0 || x + 5 == x0) continue; // 跳过重复扫描
+
+        int count = getCount(x, y) + getCount(x + 1, y) + getCount(x + 2, y) + getCount(x + 3, y) + getCount(x + 4, y) + getCount(x + 5, y);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 横向扫描
+    for (int x=x0, y=y0-5; y<GRID_SIZE-5 && y<=y0; y++) {
+        if (y < 0) continue;
+
+        int count = getCount(x, y) + getCount(x, y + 1) + getCount(x, y + 2) + getCount(x, y + 3) + getCount(x, y + 4) + getCount(x, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    for (int x=x1, y=y1-5; y<GRID_SIZE-5 && y<=y1; y++) {
+        if (y < 0) continue;
+        if (y == y0 || y + 1 == y0 || y + 2 == y0 || y + 3 == y0 || y + 4 == y0 || y + 5 == y0) continue; // 跳过重复扫描
+
+        int count = getCount(x, y) + getCount(x, y + 1) + getCount(x, y + 2) + getCount(x, y + 3) + getCount(x, y + 4) + getCount(x, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 右下对角扫描
+    for (int x=x0-5, y=y0-5; (x<GRID_SIZE-5 && x<=x0) && (y<GRID_SIZE-5 && y<=y0); x++, y++) {
+        if (x < 0 || y < 0) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y + 1) + + getCount(x + 2, y + 2) + + getCount(x + 3, y + 3) + + getCount(x + 4, y + 4) + + getCount(x + 5, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    for (int x=x1-5, y=y1-5; (x<GRID_SIZE-5 && x<=x1) && (y<GRID_SIZE-5 && y<=y1); x++, y++) {
+        if (x < 0 || y < 0) continue;
+        if ((x == x0 && y == y0) || (x + 1 == x0 && y + 1 == y0) || (x + 2 == x0 && y + 2 == y0)|| (x + 3 == x0 && y + 3 == y0) || (x + 4 == x0 && y + 4 == y0) || (x + 5 == x0 && y + 5 == y0)) continue; // 跳过重复扫描
+
+        int count = getCount(x, y) + getCount(x + 1, y + 1) + + getCount(x + 2, y + 2) + + getCount(x + 3, y + 3) + + getCount(x + 4, y + 4) + + getCount(x + 5, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 左下对角扫描
+    for (int x=x0-5, y=y0+5; (x<GRID_SIZE-5 && x<=x0) && (y>=y0); x++, y--) {
+        if (x < 0 || y > GRID_SIZE) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    for (int x=x1-5, y=y1+5; (x<GRID_SIZE-5 && x<=x1) && (y>=y1); x++, y--) {
+        if (x < 0 || y > GRID_SIZE) continue;
+        if ((x == x0 && y == y0) || (x + 1 == x0 && y - 1 == y0) || (x + 2 == x0 && y - 2 == y0)|| (x + 3 == x0 && y - 3 == y0) || (x + 4 == x0 && y - 4 == y0) || (x + 5 == x0 && y - 5 == y0)) continue; // 跳过重复扫描
+
+        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+
+    //
+    for(int i = 1; i < 7; i++) {
+        score += (countOfMyRoad[i] * scoreOfMyRoad[condition][i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[condition][i]);
+    }
+
+    return score;
+}
+
+
+/**
+ * 预评估
+ */
+int Evaluator::preEvaluate(Step step) {
+    int score = 0;
+    int condition = 0; // condition用于表示进攻型还是防守型, 1进攻, 0防守
+    std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
+    std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
+
+    if (baseScore > ALERT_SCORE) {
+        condition = 1;
+    }
+
+    // 纵向扫描
+    for (int x=step.x-5, y=step.y; x<GRID_SIZE-6 && x<=step.x; x++) {
+        if (x < 0) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y) + getCount(x + 2, y) + getCount(x + 3, y) + getCount(x + 4, y) + getCount(x + 5, y);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 横向扫描
+    for (int x=step.x, y=step.y-5; y<GRID_SIZE-5 && y<=step.y; y++) {
+        if (y < 0) continue;
+
+        int count = getCount(x, y) + getCount(x, y + 1) + getCount(x, y + 2) + getCount(x, y + 3) + getCount(x, y + 4) + getCount(x, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 右下对角扫描
+    for (int x=step.x-5, y=step.y-5; (x<GRID_SIZE-5 && x<=step.x) && (y<GRID_SIZE-5 && y<=step.y); x++, y++) {
+        if (x < 0 || y < 0) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y + 1) + + getCount(x + 2, y + 2) + + getCount(x + 3, y + 3) + + getCount(x + 4, y + 4) + + getCount(x + 5, y + 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+    // 左下对角扫描
+    for (int x=step.x-5, y=step.y+5; (x<GRID_SIZE-5 && x<=step.x) && (y>=step.y); x++, y--) {
+        if (x < 0 || y > GRID_SIZE) continue;
+
+        int count = getCount(x, y) + getCount(x + 1, y - 1) + + getCount(x + 2, y - 2) + + getCount(x + 3, y - 3) + + getCount(x + 4, y - 4) + + getCount(x + 5, y - 5);
+        updateRoadTypeNum(count, countOfMyRoad, countOfEnemyRoad);
+    }
+
+    for(int i = 1; i < 7; i++) {
+        score += (countOfMyRoad[i] * scoreOfMyRoad[condition][i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[condition][i]);
+    }
+
+    return score;
+}
+
+
+// bot
 class Bot {
 private:
     Color botColor;
-    int basicDepthLimit = 2; // 每次推理深度
-    int topK = 20;
+    const int DEPTH_LIMIT = 3; // 每次推理深度
+    const int TOP_K = 20;
 
-    Turn maxTurn = Turn(-1, -1, -1, -1);
+    Evaluator evaluator;
 
     std::vector<GameNode*> firstTurnNodes;
 
+    std::vector<Step> availableSteps;
+
     Turn makeOpening();
-    inline int getDepthByWeight(int weight0, int weight1);
-    float simulateStep(GameNode*& currentRoot, Grid& currentGrid, const std::vector<Turn>& preTurns, Color currentColor, int turnCount, int currentDepthLimit);
-    float evaluate(Grid& grid, Step step, Color currentColor);
-    float evaluateForColor(Grid& grid, Step& step, Color currentColor);
-    inline bool count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count);
+    Turn simulateStep(Grid& grid);
+    void preSimulate(Grid& grid);
+    float simulateStep(GameNode*& currentRoot, Grid& currentGrid, Color currentColor, int turnCount);
 
 public:
     void setColor(Color c);
@@ -207,19 +455,6 @@ Turn Bot::makeOpening() {
 
 
 /**
- * 根据点位权重计算深度，主要是为了设置深度上限
- */
-inline int Bot::getDepthByWeight(int weight0, int weight1) {
-//    int averageWeight = (weight0 + weight1) / 2;
-    int averageWeight = (weight0 < weight1) ? weight0 : weight1;
-
-    if (averageWeight <= 6) return 0;
-    else if (averageWeight <= 12) return 1;
-    return 2;
-}
-
-
-/**
  * 基于博弈树进行决策
  */
 Turn Bot::makeDecision(Grid& grid, const int& turnId) {
@@ -227,8 +462,71 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
     // 构建博弈树进行推理
-    auto* root = new GameNode(Turn(-1, -1, -1, -1), true);
-    simulateStep(root, grid, std::vector<Turn>(), -botColor, 0, basicDepthLimit);
+    return simulateStep(grid);
+}
+
+
+/**
+ * 预推理，得到可选落点（top-k个）
+ */
+void Bot::preSimulate(Grid& grid) {
+    std::priority_queue<Step, std::vector<Step>, std::less<>> steps;
+
+    Evaluator evaluatorOfMe, evaluatorOfEnemy;
+    evaluatorOfMe.init(botColor, grid);
+    evaluatorOfEnemy.init(-botColor, grid);
+
+    for (Step step: grid.getAll()) {
+        int weightOfMe = evaluatorOfMe.preEvaluate(step);
+        int weightOfEnemy = evaluatorOfEnemy.preEvaluate(step);
+
+        step.weight = (weightOfMe > weightOfEnemy) ? weightOfMe : weightOfEnemy;
+        steps.push(step);
+    }
+
+    for (int i=0; i<TOP_K && !steps.empty(); i++) {
+        availableSteps.push_back(steps.top());
+        steps.pop();
+    }
+}
+
+
+/**
+ * 第一层推理，先进行预推理
+ */
+Turn Bot::simulateStep(Grid& grid) {
+    preSimulate(grid);
+
+    //
+    Turn maxTurn = Turn(-1, -1, -1, -1);
+    // 最大值，最小值
+    float max = -FLT_MAX, min = FLT_MAX;
+    //
+    float alpha = FLT_MAX, beta = -FLT_MAX;
+
+    for (int i=0; i<availableSteps.size(); i++) {
+        Step step0 = availableSteps[i];
+        for (int j = i + 1; j < availableSteps.size(); j++) {
+            Step step1 = availableSteps[j];
+
+            // 当前turn
+            Turn childTurn(step0.x, step0.y, step1.x, step1.y);
+
+            // childNode node
+            auto* childNode = new GameNode(childTurn, false, alpha, beta);
+
+            //
+            float childScore = simulateStep(childNode, grid, botColor, 1);
+
+            // delete childNode;
+
+            if (childScore > max) {
+                maxTurn = childTurn;
+                max = childScore;
+            }
+            if (childScore > beta) beta = childScore;
+        }
+    }
 
     return maxTurn;
 }
@@ -239,63 +537,51 @@ Turn Bot::makeDecision(Grid& grid, const int& turnId) {
  * 递归建立博弈树，在叶节点调用评估函数，反向传播评估得分
  * minimax + alpha-beta剪枝
  */
-float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::vector<Turn>& preTurns, const Color currentColor, int turnCount, int currentDepthLimit) {
+float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const Color currentColor, int turnCount) {
     // 若搜索深度触底，终止搜索，进行评估
-    if (turnCount == currentDepthLimit) {
-        for (Turn preTurn: preTurns) {
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x0, preTurn.y0), currentColor);
-            currentNode->score += evaluate(currentGrid, Step(preTurn.x1, preTurn.y1), currentColor);
-        }
+    if (turnCount == DEPTH_LIMIT) {
+        currentNode->score = evaluator.evaluate(currentNode->turn);
 
         return currentNode->score;
     }
 
+    // 执行上一手落子，获得用于当前节点的所有子节点的childGrid
+    Grid childGrid = currentGrid;
+    childGrid.doStep(currentNode->turn.x0, currentNode->turn.y0, currentColor);
+    childGrid.doStep(currentNode->turn.x1, currentNode->turn.y1, currentColor);
+
     // 最大值，最小值
     float max = -FLT_MAX, min = FLT_MAX;
 
-    // 继续搜索
-    std::vector<Step> availableSteps = currentGrid.getAvailable(topK);
+    //
+    if (turnCount == DEPTH_LIMIT - 1) {
+        evaluator.init(-currentColor, childGrid);
+    }
 
+    // 继续搜索
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
+        if (currentGrid.data[step0.x][step0.y] != BLANK) continue;
+
         for (int j=i+1; j<availableSteps.size(); j++) {
             Step step1 = availableSteps[j];
+            if (currentGrid.data[step1.x][step1.y] != BLANK) continue;
 
-            // this turn
+            // 当前turn
             Turn childTurn(step0.x, step0.y, step1.x, step1.y);
-            // child node
-            auto* child = new GameNode(childTurn, -(currentColor) != botColor, currentNode->alpha, currentNode->beta);
-            // next grid
-            Grid childGrid = currentGrid;
-            childGrid.doStep(step0.x, step0.y, currentColor);
-            childGrid.doStep(step1.x, step1.y, currentColor);
-            // new preTurns list
-            std::vector<Turn> childPreTurns = preTurns;
-            childPreTurns.push_back(childTurn);
 
-            // 第一手落子时，更新当前子树搜索深度限制
-            if (turnCount == 0) {
-                currentDepthLimit = basicDepthLimit + getDepthByWeight(currentGrid.weight[step0.x][step0.y], currentGrid.weight[step1.x][step1.y]);
-            }
+            // childNode node
+            auto* childNode = new GameNode(childTurn, -(currentColor) != botColor, currentNode->alpha, currentNode->beta);
 
             // 继续搜索
-            float childScore = simulateStep(child, childGrid, childPreTurns, -(currentColor), turnCount + 1, currentDepthLimit);
-
-            // 调试输出
-//            std::cout << "(" << child->turn.x0 << ", " << child->turn.y0 << ")" << ", (" << child->turn.x1 << ", " << child->turn.y1 << ")" << std::endl;
-//            std::cout << "score: " << childScore << std::endl;
-//            std::cout << "depth: " << currentDepthLimit << std::endl;
-//            std::cout << std::endl;
+            float childScore = simulateStep(childNode, childGrid, -(currentColor), turnCount + 1);
 
             // 释放内存
-            delete child; // 耗时操作
+            delete childNode; // 耗时操作
 
             // 分数反向传递 和 alpha-beta更新
             if (currentNode->isMaxNode) {
-                if (childScore > max) {
-                    max = childScore;
-                    if (turnCount == 0) maxTurn = childTurn;
-                }
+                if (childScore > max) max = childScore;
                 if (childScore > currentNode->beta) currentNode->beta = childScore;
             } else {
                 if (childScore < min) min = childScore;
@@ -315,112 +601,8 @@ float Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const std::ve
     return currentNode->score;
 }
 
-/**
- * 评估函数
- */
-float Bot::evaluate(Grid& grid, Step step, Color currentColor) {
-    return evaluateForColor(grid, step, currentColor) - evaluateForColor(grid, step, -currentColor);
-}
 
-
-/**
- * 评估指定点位为指定颜色时的分值
- */
-float Bot::evaluateForColor(Grid& grid, Step& step, Color currentColor) {
-//    Color currentColor = grid.data[step.x][step.y];
-    int x, y;
-    float inLineCount = 1, inColumnCount = 1, inLeftDiagonalCount = 1, inRightDiagonalCount = 1;
-    bool isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
-
-    for (int shift = -1; shift >= -5; shift--) {
-        // 行
-        if (isLineUnbroken) {
-            x = step.x;
-            y = step.y + shift;
-            isLineUnbroken = count(grid, x, y, currentColor, inLineCount);
-        }
-
-        // 列
-        if (isColumnUnbroken) {
-            x = step.x + shift;
-            y = step.y;
-            isColumnUnbroken = count(grid, x, y, currentColor, inColumnCount);
-        }
-
-        // 左对角线
-        if (isLeftDiagonalUnbroken) {
-            x = step.x + shift;
-            y = step.y + shift;
-            isLeftDiagonalUnbroken = count(grid, x, y, currentColor, inLeftDiagonalCount);
-        }
-
-        // 右对角线
-        if (isRightDiagonalUnbroken) {
-            x = step.x - shift;
-            y = step.y - shift;
-            isRightDiagonalUnbroken = count(grid, x, y, currentColor, inRightDiagonalCount);
-        }
-    }
-
-    isLineUnbroken = true, isColumnUnbroken = true, isLeftDiagonalUnbroken = true, isRightDiagonalUnbroken = true;
-    for (int shift = 1; shift <= 5; shift++) {
-        // 行
-        if (isLineUnbroken) {
-            x = step.x;
-            y = step.y + shift;
-            isLineUnbroken = count(grid, x, y, currentColor, inLineCount);
-        }
-
-        // 列
-        if (isColumnUnbroken) {
-            x = step.x + shift;
-            y = step.y;
-            isColumnUnbroken = count(grid, x, y, currentColor, inColumnCount);
-        }
-
-        // 左对角线
-        if (isLeftDiagonalUnbroken) {
-            x = step.x + shift;
-            y = step.y + shift;
-            isLeftDiagonalUnbroken = count(grid, x, y, currentColor, inLeftDiagonalCount);
-        }
-
-        // 右对角线
-        if (isRightDiagonalUnbroken) {
-            x = step.x - shift;
-            y = step.y - shift;
-            isRightDiagonalUnbroken = count(grid, x, y, currentColor, inRightDiagonalCount);
-        }
-    }
-
-    float totalScore = currentColor * (pow(inLineCount, 19) + pow(inColumnCount, 19) + pow(inLeftDiagonalCount, 19) + pow(inRightDiagonalCount, 19));
-
-    return totalScore;
-}
-
-/**
- * 计数，同色+1,异色-1并终止，空位记为0.2
- */
-inline bool Bot::count(const Grid& grid, const int& x, const int& y, const Color& currentColor, float& count) {
-    if (x<0 || x>=GRID_SIZE || y<0 || y>=GRID_SIZE) return false;
-
-    if (grid.data[x][y] == currentColor) {
-        // 同色
-        count += 1;
-    } else if (grid.data[x][y] == -currentColor) {
-        // 遇异色终止计数
-//        count += -1;
-        return false;
-    } else {
-        // 空位记为0.2
-//        count += 0.2;
-    }
-
-    return true;
-}
-
-
-
+//
 int inputGrid(Grid& grid, Bot& bot) {
     int x0, y0, x1, y1;
     int turnId;
@@ -456,8 +638,6 @@ int inputGrid(Grid& grid, Bot& bot) {
 }
 
 int main() {
-    struct timeval s_tv, e_tv;
-
     std::ios::sync_with_stdio(false);
 
     Grid grid;
@@ -465,11 +645,7 @@ int main() {
 
     int turnId = inputGrid(grid, bot);
 
-    gettimeofday(&s_tv, NULL);
-
     Turn result = bot.makeDecision(grid, turnId);
-
-    gettimeofday(&e_tv, NULL);
 
     std::cout << result.x0 << ' ' << result.y0 << ' ' << result.x1 << ' ' << result.y1 << std::endl;
 

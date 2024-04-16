@@ -9,7 +9,13 @@ void Grid::doStep(int x, int y, Color color) {
     }
 }
 
-std::vector<Step> Grid::getAvailable() {
+
+void Grid::undoStep(int x, int y) {
+    data[x][y] = BLANK;
+}
+
+
+std::vector<Step> Grid::getAll() {
     std::vector<Step> availableSteps;
 
     for (int x=0; x<GRID_SIZE; x++) {
@@ -26,7 +32,13 @@ std::vector<Step> Grid::getAvailable() {
 void Grid::output() {
     for (int x=0; x<GRID_SIZE; x++) {
         for (int y=0; y<GRID_SIZE; y++) {
-            std::cout << data[x][y] << " ";
+            if (data[x][y] == -1) {
+                std::cout << "w ";
+            } else if (data[x][y] == 1) {
+                std::cout << "b ";
+            } else {
+                std::cout << data[x][y] << " ";
+            }
         }
         std::cout << std::endl;
     }

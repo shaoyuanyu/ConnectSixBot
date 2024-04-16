@@ -15,8 +15,7 @@ class Evaluator {
 private:
     Color currentColor;
     Grid grid;
-
-    const int ALERT_SCORE = 20;
+    const int ALERT_SCORE = 9;
     int baseScore = INT_MIN;
 
     std::vector<std::vector<int>> scoreOfMyRoad = std::vector<std::vector<int>>(2, std::vector<int>(10));
@@ -28,8 +27,10 @@ private:
     inline void updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const;
 
 public:
-    Evaluator(Color botColor, Grid grid);
+    Evaluator();
+    void init(Color givenColor, Grid givenGrid);
     int evaluate(Turn move);
+    int preEvaluate(Step step);
 };
 
 

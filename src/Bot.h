@@ -7,22 +7,28 @@
 
 
 #include <vector>
+#include <queue>
 #include "GameConfig.h"
 #include "Grid.h"
 #include "GameNode.h"
+#include "Evaluator.h"
 
 class Bot {
 private:
     Color botColor;
-    int depthLimit = 3; // 每次推理深度
+    const int DEPTH_LIMIT = 3; // 每次推理深度
+    const int TOP_K = 20;
 
-    Turn maxTurn = Turn(-1, -1, -1, -1);
+    Evaluator evaluator;
 
     std::vector<GameNode*> firstTurnNodes;
 
+    std::vector<Step> availableSteps;
+
     Turn makeOpening();
-    float simulateStep(GameNode*& currentRoot, Grid& currentGrid, const std::vector<Turn>& preTurns, Color currentColor, int turnCount);
-    float evaluate(Grid& grid, Turn move, Color currentColor);
+    Turn simulateStep(Grid& grid);
+    void preSimulate(Grid& grid);
+    float simulateStep(GameNode*& currentRoot, Grid& currentGrid, Color currentColor, int turnCount);
 
 public:
     void setColor(Color c);
