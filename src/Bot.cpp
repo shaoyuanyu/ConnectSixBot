@@ -48,7 +48,7 @@ void Bot::preSimulate(Grid& grid) {
         long enemyScore = Evaluator(grid, -botColor).preEvaluate(step);
         grid.undoStep(step.x, step.y);
 
-        step.weight = myScore - enemyScore;
+        step.weight = myScore + enemyScore;
 
         steps.push(step);
     }
