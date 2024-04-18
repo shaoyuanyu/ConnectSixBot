@@ -4,9 +4,11 @@
 void Grid::doStep(int x, int y, Color color) {
     if (x == -1) return;
 
-    if (data[x][y] == BLANK) {
-        data[x][y] = color;
-    }
+//    if (data[x][y] == BLANK) {
+//        data[x][y] = color;
+//    }
+
+    data[x][y] = color;
 }
 
 

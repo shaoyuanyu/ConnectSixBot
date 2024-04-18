@@ -19,13 +19,13 @@
 typedef int Color;
 
 /**
- * 一手落子
+ * 一步
  */
 struct Step {
     int x;
     int y;
 
-    int weight = 0;
+    long weight = 0;
 
     Step(int x, int y): x(x), y(y) {}
 
@@ -35,16 +35,15 @@ struct Step {
 };
 
 /**
- * 一回合包括两手落子
+ * 一个Move包含两个Step
  */
-struct Turn {
+struct Move {
     int x0, y0;
     int x1, y1;
 
-    Turn(int x0, int y0, int x1, int y1): x0(x0), y0(y0), x1(x1), y1(y1) {}
-    Turn(Step step0, Step step1): x0(step0.x), y0(step0.y), x1(step1.x), y1(step1.y) {}
+    Move(int x0, int y0, int x1, int y1): x0(x0), y0(y0), x1(x1), y1(y1) {}
+    Move(Step step0, Step step1): x0(step0.x), y0(step0.y), x1(step1.x), y1(step1.y) {}
 };
-// TODO: Turn能否用两个Step组合
 
 
 #endif //CONNECT_SIX_BOT_GAME_CONFIG_H

@@ -1,9 +1,9 @@
 //
 // 六子棋
+// ysy & lnz
 //
 
 #include <iostream>
-#include <sys/time.h>
 #include "Grid.h"
 #include "Bot.h"
 
@@ -41,8 +41,6 @@ int inputGrid(Grid& grid, Bot& bot) {
 }
 
 int main() {
-//    struct timeval s_tv, e_tv;
-
     std::ios::sync_with_stdio(false);
 
     Grid grid;
@@ -50,21 +48,9 @@ int main() {
 
     int turnId = inputGrid(grid, bot);
 
-//    gettimeofday(&s_tv, NULL);
-
-    // 调试输出
-//    std::cout << "make decision..." << std::endl;
-//    grid.output();
-
-    Turn result = bot.makeDecision(grid, turnId);
-
-//    gettimeofday(&e_tv, NULL);
+    Move result = bot.makeDecision(grid, turnId);
 
     std::cout << result.x0 << ' ' << result.y0 << ' ' << result.x1 << ' ' << result.y1 << std::endl;
-
-//    std::cout << "started at: " << s_tv.tv_sec << ", " << s_tv.tv_usec << std::endl;
-//    std::cout << "ended at: " << e_tv.tv_sec << ", " << e_tv.tv_usec << std::endl;
-//    std::cout << "sec: " << e_tv.tv_sec - s_tv.tv_sec << std::endl;
 
     return 0;
 }

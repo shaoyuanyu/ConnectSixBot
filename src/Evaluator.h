@@ -13,24 +13,20 @@
 
 class Evaluator {
 private:
-    Color currentColor;
     Grid grid;
-    const int ALERT_SCORE = 9;
-    int baseScore = INT_MIN;
+    Color currentColor;
 
-    std::vector<std::vector<int>> scoreOfMyRoad = std::vector<std::vector<int>>(2, std::vector<int>(10));
-    std::vector<std::vector<int>> scoreOfEnemyRoad = std::vector<std::vector<int>>(2, std::vector<int>(10));
+    std::vector<long> scoreOfMyRoad = std::vector<long>(7);
+    std::vector<long> scoreOfEnemyRoad = std::vector<long>(7);
 
-    int calScore();
-    int calScore(Turn move);
+    long calScore();
     inline int getCount(int x, int y);
     inline void updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const;
 
 public:
-    Evaluator();
-    void init(Color givenColor, Grid givenGrid);
-    int evaluate(Turn move);
-    int preEvaluate(Step step);
+    Evaluator(Grid grid, Color currentColor);
+    long evaluate();
+    long preEvaluate(Step step);
 };
 
 

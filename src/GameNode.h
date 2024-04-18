@@ -7,19 +7,19 @@
 
 
 #include <vector>
-#include <cfloat>
+#include <climits>
 #include "GameConfig.h"
 #include "Grid.h"
 
 struct GameNode {
-    float score = 0.0;
-    Turn turn; // 一回合，两手落子
+    long score = 0;
+    Move move; // 一回合，两手落子
     bool isMaxNode; // 是否为Max节点
-    float alpha = FLT_MAX; // 上确界
-    float beta = -FLT_MAX; // 下确界
+    long alpha = LONG_MAX; // 上确界
+    long beta = -LONG_MAX; // 下确界
 
-    GameNode(Turn turn, bool isMaxNode): turn(turn), isMaxNode(isMaxNode) {}
-    GameNode(Turn turn, bool isMaxNode, float alpha, float beta): turn(turn), isMaxNode(isMaxNode), alpha(alpha), beta(beta) {}
+    GameNode(Move move, bool isMaxNode): move(move), isMaxNode(isMaxNode) {}
+    GameNode(Move move, bool isMaxNode, long alpha, long beta): move(move), isMaxNode(isMaxNode), alpha(alpha), beta(beta) {}
 };
 
 

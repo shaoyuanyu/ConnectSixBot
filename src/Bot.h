@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <queue>
+#include <cmath>
 #include "GameConfig.h"
 #include "Grid.h"
 #include "GameNode.h"
@@ -19,22 +20,20 @@ private:
     const int DEPTH_LIMIT = 3; // 每次推理深度
     const int TOP_K = 20;
 
-    Evaluator evaluator;
-
-    std::vector<GameNode*> firstTurnNodes;
+    std::vector<GameNode*> firstMoveNodes;
 
     std::vector<Step> availableSteps;
 
-    Turn makeOpening();
-    Turn simulateStep(Grid& grid);
+    Move makeOpening();
+    Move simulateStep(Grid& grid);
     void preSimulate(Grid& grid);
-    float simulateStep(GameNode*& currentRoot, Grid& currentGrid, Color currentColor, int turnCount);
+    long simulateStep(GameNode*& currentNode, Grid& currentGrid, const Color currentColor, int moveCount);
 
 public:
     void setColor(Color c);
     Color getColor() const; // 获取我方颜色
     Color getOppositeColor() const; // 获取对手颜色
-    Turn makeDecision(Grid& grid, const int& turnId); // 基于博弈树进行决策
+    Move makeDecision(Grid& grid, const int& moveId); // 基于博弈树进行决策
 };
 
 
