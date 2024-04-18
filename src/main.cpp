@@ -48,6 +48,10 @@ int main() {
 
     int turnId = inputGrid(grid, bot);
 
+    std::cout << "GRID:" << std::endl;
+    grid.output();
+    std::cout << std::endl;
+
     Move result = bot.makeDecision(grid, turnId);
 
     std::cout << result.x0 << ' ' << result.y0 << ' ' << result.x1 << ' ' << result.y1 << std::endl;

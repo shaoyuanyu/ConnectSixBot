@@ -10,7 +10,7 @@
 #include "GameConfig.h"
 
 struct Grid {
-    Color data[GRID_SIZE][GRID_SIZE] = { BLANK };
+    Color data[GRID_SIZE][GRID_SIZE] = { BLANK }; // data[y][x]
 
     void doStep(int x, int y, Color color);
     void undoStep(int x, int y);

@@ -1,3 +1,4 @@
+#include <iostream>
 #include "Bot.h"
 
 void Bot::setColor(Color c) {
@@ -66,8 +67,9 @@ void Bot::preSimulate(Grid& grid) {
 Move Bot::simulateStep(Grid& grid) {
     preSimulate(grid);
 
-    //
+    // 第一次move（我方）中最大者（相当于根max节点在进行选择）
     Move maxMove = Move(-1, -1, -1, -1);
+    //
     long max = -LONG_MAX;
     long alpha = LONG_MAX, beta = -LONG_MAX;
 
@@ -86,9 +88,7 @@ Move Bot::simulateStep(Grid& grid) {
             childGrid.doStep(step1.x, step1.y, botColor);
 
             //
-            long childScore = simulateStep(childNode, childGrid, botColor, 1);
-
-            // delete childNode;
+            long childScore = simulateStep(childNode, childGrid, -botColor, 1);
 
             if (childScore > max) {
                 maxMove = childMove;
@@ -107,19 +107,28 @@ Move Bot::simulateStep(Grid& grid) {
  * 递归建立博弈树，在叶节点调用评估函数，反向传播评估得分
  * minimax + alpha-beta剪枝
  */
-long Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const Color currentColor, int moveCount) {
+long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color currentColor, int moveCount) {
     // 若搜索深度触底，终止搜索，进行评估
     if (moveCount == DEPTH_LIMIT) {
-        long myScore = Evaluator(currentGrid, currentColor).evaluate();
+        std::cout << "(" << parentNode->move.x0 << ", " << parentNode->move.y0 << "), (" << parentNode->move.x1 << ", " << parentNode->move.y1 << ")" << std::endl;
+        parentGrid.output();
 
-        currentGrid.doStep(currentNode->move.x0, currentNode->move.y0, -currentColor);
-        currentGrid.doStep(currentNode->move.x1, currentNode->move.y1, -currentColor);
+        long myScore = Evaluator(parentGrid, currentColor).evaluate();
 
-        long enemyScore = Evaluator(currentGrid, -currentColor).evaluate();
+        parentGrid.doStep(parentNode->move.x0, parentNode->move.y0, -currentColor);
+        parentGrid.doStep(parentNode->move.x1, parentNode->move.y1, -currentColor);
 
-        currentNode->score = myScore + enemyScore;
+        long enemyScore = Evaluator(parentGrid, -currentColor).evaluate();
 
-        return currentNode->score;
+        parentNode->score = (myScore + enemyScore);
+        if (parentNode->isMaxNode) {
+            parentNode->score *= -1;
+        }
+
+        std::cout << parentNode->score << std::endl;
+        std::cout << std::endl;
+
+        return parentNode->score;
     }
 
     // 最大值，最小值
@@ -128,45 +137,45 @@ long Bot::simulateStep(GameNode*& currentNode, Grid& currentGrid, const Color cu
     // 继续搜索
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
-        if (currentGrid.data[step0.x][step0.y] != BLANK) continue;
+        if (parentGrid.data[step0.y][step0.x] != BLANK) continue;
 
         for (int j=i+1; j<availableSteps.size(); j++) {
             Step step1 = availableSteps[j];
-            if (currentGrid.data[step1.x][step1.y] != BLANK) continue;
+            if (parentGrid.data[step1.y][step1.x] != BLANK) continue;
 
 
-            Move childMove(step0.x, step0.y, step1.x, step1.y);
+            Move currentMove(step0.x, step0.y, step1.x, step1.y);
             //
-            auto* childNode = new GameNode(childMove, -(currentColor) != botColor, currentNode->alpha, currentNode->beta);
+            auto* currentNode = new GameNode(currentMove, currentColor != botColor, parentNode->alpha, parentNode->beta);
             //
-            Grid childGrid = currentGrid;
-            childGrid.doStep(step0.x, step0.y, currentColor);
-            childGrid.doStep(step1.x, step1.y, currentColor);
+            Grid currentGrid = parentGrid;
+            currentGrid.doStep(step0.x, step0.y, currentColor);
+            currentGrid.doStep(step1.x, step1.y, currentColor);
 
             // 继续搜索
-            long childScore = simulateStep(childNode, childGrid, -(currentColor), moveCount + 1);
+            long currentScore = simulateStep(currentNode, currentGrid, -(currentColor), moveCount + 1);
 
             // 释放内存
-            delete childNode; // 耗时操作
+            delete currentNode; // 耗时操作
 
             // 分数反向传递 和 alpha-beta更新
-            if (currentNode->isMaxNode) {
-                if (childScore > max) max = childScore;
-                if (childScore > currentNode->beta) currentNode->beta = childScore;
+            if (parentNode->isMaxNode) {
+                if (currentScore > max) max = currentScore;
+                if (currentScore > parentNode->beta) parentNode->beta = currentScore;
             } else {
-                if (childScore < min) min = childScore;
-                if (childScore < currentNode->alpha) currentNode->alpha = childScore;
+                if (currentScore < min) min = currentScore;
+                if (currentScore < parentNode->alpha) parentNode->alpha = currentScore;
             }
 
             // 检查alpha-beta，判断是否剪枝
-            if (currentNode->alpha < currentNode->beta) {
-                currentNode->score = (currentNode->isMaxNode) ? max : min;
-                return currentNode->score;
+            if (parentNode->alpha < parentNode->beta) {
+                parentNode->score = (parentNode->isMaxNode) ? max : min;
+                return parentNode->score;
             }
         }
     }
 
-    currentNode->score = (currentNode->isMaxNode) ? max : min;
+    parentNode->score = (parentNode->isMaxNode) ? max : min;
 
-    return currentNode->score;
+    return parentNode->score;
 }
