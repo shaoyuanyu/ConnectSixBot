@@ -20,12 +20,14 @@ private:
     std::vector<long> scoreOfEnemyRoad = std::vector<long>(7);
 
     long calScore();
+    long calScore(Move move);
     inline int getCount(int x, int y);
     inline void updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const;
 
 public:
     Evaluator(Grid grid, Color currentColor);
     long evaluate();
+    long evaluate(Move move);
     long preEvaluate(Step step);
 };
 

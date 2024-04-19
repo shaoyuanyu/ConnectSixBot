@@ -27,11 +27,14 @@ Move Bot::makeOpening() {
 /**
  * 基于博弈树进行决策
  */
-Move Bot::makeDecision(Grid& grid, const int& moveId) {
+Move Bot::makeDecision(Grid& grid, const int& turnId) {
     // 我方为黑开局，则转向开局库决策
-    if (moveId == 1 && botColor == BLACK) return makeOpening();
+    if (turnId == 1 && botColor == BLACK) return makeOpening();
 
-    // 构建博弈树进行推理
+//    if (turnId >= 40) {
+//        TOP_K = 10;
+//    }
+
     return simulateStep(grid);
 }
 
@@ -39,8 +42,9 @@ Move Bot::makeDecision(Grid& grid, const int& moveId) {
 /**
  * 预推理，得到可选落点（top-k个）
  */
-void Bot::preSimulate(Grid& grid) {
+std::vector<Step> Bot::preSimulate(Grid& grid) {
     std::priority_queue<Step, std::vector<Step>, std::less<>> steps;
+    std::vector<Step> availableSteps;
 
     for (Step step: grid.getAll()) {
         grid.doStep(step.x, step.y, botColor);
@@ -58,6 +62,8 @@ void Bot::preSimulate(Grid& grid) {
         availableSteps.push_back(steps.top());
         steps.pop();
     }
+
+    return availableSteps;
 }
 
 
@@ -65,7 +71,7 @@ void Bot::preSimulate(Grid& grid) {
  * 第一层推理，先进行预推理
  */
 Move Bot::simulateStep(Grid& grid) {
-    preSimulate(grid);
+    std::vector<Step> availableSteps = preSimulate(grid);
 
     // 第一次move（我方）中最大者（相当于根max节点在进行选择）
     Move maxMove = Move(-1, -1, -1, -1);
@@ -90,6 +96,11 @@ Move Bot::simulateStep(Grid& grid) {
             //
             long childScore = simulateStep(childNode, childGrid, -botColor, 1);
 
+            std::cout << "(" << step0.x << ", " << step0.y << "), (" << step1.x << ", " << step1.y << "): " << std::endl;
+            childGrid.output();
+            std::cout << childScore << std::endl;
+            std::cout << std::endl;
+
             if (childScore > max) {
                 maxMove = childMove;
                 max = childScore;
@@ -110,29 +121,26 @@ Move Bot::simulateStep(Grid& grid) {
 long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color currentColor, int moveCount) {
     // 若搜索深度触底，终止搜索，进行评估
     if (moveCount == DEPTH_LIMIT) {
-        std::cout << "(" << parentNode->move.x0 << ", " << parentNode->move.y0 << "), (" << parentNode->move.x1 << ", " << parentNode->move.y1 << ")" << std::endl;
-        parentGrid.output();
 
-        long myScore = Evaluator(parentGrid, currentColor).evaluate();
+//        parentGrid.doStep(parentNode->move.x0, parentNode->move.y0, botColor);
+//        parentGrid.doStep(parentNode->move.x1, parentNode->move.y1, botColor);
+//        long myScore = Evaluator(parentGrid, botColor).evaluate();
+//
+//        parentGrid.doStep(parentNode->move.x0, parentNode->move.y0, -botColor);
+//        parentGrid.doStep(parentNode->move.x1, parentNode->move.y1, -botColor);
+//        long enemyScore = Evaluator(parentGrid, -botColor).evaluate();
+//
+//        parentNode->score = myScore - enemyScore;
 
-        parentGrid.doStep(parentNode->move.x0, parentNode->move.y0, -currentColor);
-        parentGrid.doStep(parentNode->move.x1, parentNode->move.y1, -currentColor);
-
-        long enemyScore = Evaluator(parentGrid, -currentColor).evaluate();
-
-        parentNode->score = (myScore + enemyScore);
-        if (parentNode->isMaxNode) {
-            parentNode->score *= -1;
-        }
-
-        std::cout << parentNode->score << std::endl;
-        std::cout << std::endl;
+        parentNode->score = Evaluator(parentGrid, botColor).evaluate();
 
         return parentNode->score;
     }
 
     // 最大值，最小值
     long max = -LONG_MAX, min = LONG_MAX;
+
+    std::vector<Step> availableSteps = preSimulate(parentGrid);
 
     // 继续搜索
     for (int i=0; i<availableSteps.size(); i++) {
@@ -152,8 +160,28 @@ long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color curr
             currentGrid.doStep(step0.x, step0.y, currentColor);
             currentGrid.doStep(step1.x, step1.y, currentColor);
 
-            // 继续搜索
-            long currentScore = simulateStep(currentNode, currentGrid, -(currentColor), moveCount + 1);
+            // 局部检测，若已连成6子则无需继续推理
+            long currentScore = Evaluator(currentGrid, currentColor).evaluate(currentMove);
+
+            if (currentScore >= 100000000000) {
+                // 已连成6子
+//                std::cout << "already 6" << std::endl;
+
+                parentNode->score = currentScore * 10;
+
+                if (!parentNode->isMaxNode) {
+                    parentNode->score *= -1;
+                    parentNode->alpha = parentNode->score;
+                } else {
+                    parentNode->beta = parentNode->score;
+                }
+
+                return parentNode->score;
+
+            } else {
+                // 继续搜索
+                currentScore = simulateStep(currentNode, currentGrid, -(currentColor), moveCount + 1);
+            }
 
             // 释放内存
             delete currentNode; // 耗时操作
