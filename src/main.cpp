@@ -6,10 +6,12 @@
 #include <iostream>
 #include "Grid.h"
 #include "Bot.h"
+#include "Evaluator.h"
 
 int inputGrid(Grid& grid, Bot& bot) {
     int x0, y0, x1, y1;
     int turnId;
+    Move move(-1, -1, -1, -1);
 
     std::cin >> turnId;
 
@@ -24,16 +26,20 @@ int inputGrid(Grid& grid, Bot& bot) {
             bot.setColor(BLACK);
         }
 
+        Evaluator evaluator(grid, bot.getColor());
+
         // 对手落子
-        grid.doStep(x0, y0, bot.getOppositeColor());
-        grid.doStep(x1, y1, bot.getOppositeColor());
+        move = Move(x0, y0, x1, y1);
+        grid.doMove(move, bot.getOppositeColor());
+        evaluator.scan(move);
 
         // 我方落子
         if (i < turnId - 1) {
             std::cin >> x0 >> y0 >> x1 >> y1;
 
-            grid.doStep(x0, y0, bot.getColor());
-            grid.doStep(x1, y1, bot.getColor());
+            move = Move(x0, y0, x1, y1);
+            grid.doMove(move, bot.getColor());
+            evaluator.scan(move);
         }
     }
 
@@ -48,9 +54,7 @@ int main() {
 
     int turnId = inputGrid(grid, bot);
 
-//    std::cout << "GRID:" << std::endl;
-//    grid.output();
-//    std::cout << std::endl;
+    grid.output();
 
     Move result = bot.makeDecision(grid, turnId);
 

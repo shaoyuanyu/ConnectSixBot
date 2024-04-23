@@ -13,8 +13,8 @@
 
 class Evaluator {
 private:
-    Grid grid;
-    Color currentColor;
+    Grid& grid;
+    Color botColor;
 
     std::vector<long> scoreOfMyRoad = std::vector<long>(7);
     std::vector<long> scoreOfEnemyRoad = std::vector<long>(7);
@@ -22,12 +22,17 @@ private:
     long calScore();
     long calScore(Move move);
     inline int getCount(int x, int y);
+    inline int revertCount(int count) const;
     inline void updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const;
 
 public:
-    Evaluator(Grid grid, Color currentColor);
+    Evaluator(Grid& grid, Color botColor);
+
+    void scan(Move move);
+
     long evaluate();
     long evaluate(Move move);
+
     long preEvaluate(Step step);
 };
 
