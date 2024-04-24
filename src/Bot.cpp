@@ -49,12 +49,12 @@ void Bot::preSimulate(Grid grid) {
 
         // 我方落子分数
         experimentGrid.doStep(step.x, step.y, botColor);
-        myEvaluator.scan(step);
         long myScore = myEvaluator.preEvaluate(step);
+
+        experimentGrid.undoStep(step.x, step.y);
 
         // 敌方落子分数
         experimentGrid.doStep(step.x, step.y, -botColor);
-        enemyEvaluator.scan(step);
         long enemyScore = enemyEvaluator.preEvaluate(step);
 
         // 计算权重
@@ -95,9 +95,6 @@ Move Bot::simulateStep(Grid& grid) {
             //
             Grid childGrid = grid;
             childGrid.doMove(childMove, botColor);
-
-            //
-            Evaluator(childGrid, botColor).scan(childMove);
 
             //
             long childScore = simulateStep(childNode, childGrid, -botColor, 1);
@@ -152,8 +149,6 @@ long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color curr
             //
             Grid currentGrid = parentGrid;
             currentGrid.doMove(currentMove, currentColor);
-            //
-            Evaluator(currentGrid, botColor).scan(currentMove);
 
             // 局部检测，若已连成6子则无需继续推理
             long currentScore = Evaluator(currentGrid, botColor).evaluate(currentMove);

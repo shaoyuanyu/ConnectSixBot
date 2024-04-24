@@ -31,7 +31,6 @@ int inputGrid(Grid& grid, Bot& bot) {
         // 对手落子
         move = Move(x0, y0, x1, y1);
         grid.doMove(move, bot.getOppositeColor());
-        evaluator.scan(move);
 
         // 我方落子
         if (i < turnId - 1) {
@@ -39,7 +38,6 @@ int inputGrid(Grid& grid, Bot& bot) {
 
             move = Move(x0, y0, x1, y1);
             grid.doMove(move, bot.getColor());
-            evaluator.scan(move);
         }
     }
 
@@ -55,6 +53,8 @@ int main() {
     int turnId = inputGrid(grid, bot);
 
 //    grid.output();
+//
+//    Evaluator(grid, bot.getColor()).evaluate();
 
     Move result = bot.makeDecision(grid, turnId);
 

@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <climits>
+#include <cmath>
 #include "GameConfig.h"
 #include "Grid.h"
 
@@ -19,21 +20,13 @@ private:
     std::vector<long> scoreOfMyRoad = std::vector<long>(7);
     std::vector<long> scoreOfEnemyRoad = std::vector<long>(7);
 
-    long calScore();
-    long calScore(Move move);
-    long calScore(Step step);
-    inline int getCount(int x, int y);
-    inline int revertCount(int count) const;
+    inline void updateRoadCount(int maxRoad, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad);
 
 public:
     Evaluator(Grid& grid, Color botColor);
 
-    void scan(Move move);
-    void scan(Step step);
-
     long evaluate();
     long evaluate(Move move);
-
     long preEvaluate(Step step);
 };
 
