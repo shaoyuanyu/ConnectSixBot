@@ -23,7 +23,7 @@ Evaluator::Evaluator(Grid& grid, Color botColor): grid(grid), botColor(botColor)
 
 
 /**
- * 全局
+ * 全局评估
  */
 long Evaluator::evaluate() {
     return calScore();
@@ -31,10 +31,18 @@ long Evaluator::evaluate() {
 
 
 /**
- * 局部
+ * 局部评估
  */
 long Evaluator::evaluate(Move move) {
     return calScore(move);
+}
+
+
+/**
+ * 预评估
+ */
+long Evaluator::preEvaluate(Step step) {
+    return calScore(step);
 }
 
 
@@ -137,7 +145,7 @@ long Evaluator::calScore() {
 
 
 /**
- * 根据count计算分数，局部，用于判断是否在推理的中间步骤出现6子
+ * 根据count计算分数，Move局部，用于判断是否在推理的中间步骤出现6子
  */
 long Evaluator::calScore(Move move) {
     long score = 0;
@@ -166,7 +174,30 @@ long Evaluator::calScore(Move move) {
 
 
 /**
- * 增量扫描
+ * 根据count计算分数，Step局部，用于预评估
+ */
+long Evaluator::calScore(Step step) {
+    long score = 0;
+    std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
+    std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
+
+    // 统计
+    for (int type=0; type<=3; type++) {
+        int count = grid.count[step.y][step.x][type];
+
+        if (count > 0) countOfMyRoad[count]++;
+        else if (count < 0) countOfEnemyRoad[-count]++;
+    }
+
+    // 计分
+    score += (countOfMyRoad[6] * scoreOfMyRoad[6] - countOfEnemyRoad[6] * scoreOfEnemyRoad[6]);
+
+    return score;
+}
+
+
+/**
+ * Move增量扫描
  */
 void Evaluator::scan(Move move) {
     int maxCount, maxX, maxY;
@@ -199,7 +230,6 @@ void Evaluator::scan(Move move) {
     }
 
     // 更新grid.count
-//    if (maxX != -1) grid.count[maxY][maxX][0] = revertCount(maxCount);
     if (maxX != -1) {
         for (int shift=0; shift<6; shift++) {
             if (grid.data[maxY+shift][maxX] == BLANK) continue;
@@ -268,7 +298,6 @@ void Evaluator::scan(Move move) {
     }
 
     // 更新grid.count
-//    if (maxX != -1) grid.count[maxY][maxX][1] = revertCount(maxCount);
     if (maxX != -1) {
         for (int shift=0; shift<6; shift++) {
             if (grid.data[maxY][maxX+shift] == 0) continue;
@@ -337,7 +366,6 @@ void Evaluator::scan(Move move) {
     }
 
     // 更新grid.count
-//    if (maxX != -1) grid.count[maxY][maxX][2] = revertCount(maxCount);
     if (maxX != -1) {
         for (int shift=0; shift<6; shift++) {
             if (grid.data[maxY+shift][maxX+shift] == 0) continue;
@@ -406,7 +434,6 @@ void Evaluator::scan(Move move) {
     }
 
     // 更新grid.count
-//    if (maxX != -1) grid.count[maxY][maxX][3] = revertCount(maxCount);
     if (maxX != -1) {
         for (int shift=0; shift<6; shift++) {
             if (grid.data[maxY+shift][maxX-shift] == 0) continue;
@@ -451,100 +478,134 @@ void Evaluator::scan(Move move) {
 
 
 /**
- * 更新不同路类型的数量
+ * Step增量扫描
  */
-inline void Evaluator::updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const {
-    // 没棋
-    if (count == 0) return;
-    // 黑白混杂
-    if (count > 6 && count % 7 != 0) return;
+void Evaluator::scan(Step step) {
+    int maxCount, maxX, maxY;
 
-    if (count < 7) {
-        if (botColor == BLACK) {
-            countOfMyRoad[count]++;
-        } else {
-            countOfEnemyRoad[count]++;
-        }
-    } else {
-        if (botColor == BLACK) {
-            countOfEnemyRoad[count/7]++;
-        } else {
-            countOfMyRoad[count/7]++;
-        }
-    }
-}
-
-
-/**
- * 预评估
- */
-long Evaluator::preEvaluate(Step step) {
-    long score = 0;
-    std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
-    std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
-
-    int maxCount;
-    // 纵向扫描
-    maxCount = 0;
+    /**
+     * 0纵向扫描
+     */
+    maxCount = 0, maxX = -1;
     for (int x=step.x, y=step.y-5; y<GRID_SIZE-5 && y<=step.y; y++) {
         if (y < 0) continue;
 
         int count = getCount(x, y) + getCount(x, y + 1) + getCount(x, y + 2) + getCount(x, y + 3) + getCount(x, y + 4) + getCount(x, y + 5);
 
-        if (count > 6 && count % 7 != 0) continue; // 黑白混杂不计入
-        if (count > maxCount) maxCount = count; // 更新max
+        // 归零grid.count
+        grid.count[y][x][0] = 0;
+
+        // 黑白混杂不计入
+        if (count > 6 && count % 7 != 0) continue;
+
+        // 更新max
+        if (count >= maxCount) {
+            maxCount = count;
+            maxX = x;
+            maxY = y;
+        }
     }
-    updateRoadTypeNum(maxCount, countOfMyRoad, countOfEnemyRoad);
-    // 横向扫描
-    maxCount = 0;
+
+
+    // 更新grid.count
+    if (maxX != -1) {
+        for (int shift=0; shift<6; shift++) {
+            if (grid.data[maxY+shift][maxX] == BLANK) continue;
+            grid.count[maxY+shift][maxX][0] = revertCount(maxCount);
+        }
+    }
+
+    /**
+     * 1横向扫描
+     */
+    maxCount = 0, maxX = -1;
     for (int x=step.x-5, y=step.y; x<GRID_SIZE-5 && x<=step.x; x++) {
         if (x < 0) continue;
 
         int count = getCount(x, y) + getCount(x + 1, y) + getCount(x + 2, y) + getCount(x + 3, y) + getCount(x + 4, y) + getCount(x + 5, y);
 
-        if (count > 6 && count % 7 != 0) continue; // 黑白混杂不计入
-        if (count > maxCount) maxCount = count; // 更新max
+        // 归零grid.count
+        grid.count[y][x][1] = 0;
+
+        // 黑白混杂不计入
+        if (count > 6 && count % 7 != 0) continue;
+
+        // 更新max
+        if (count > maxCount) {
+            maxCount = count;
+            maxX = x;
+            maxY = y;
+        }
     }
-    updateRoadTypeNum(maxCount, countOfMyRoad, countOfEnemyRoad);
-    // 右下对角扫描
-    maxCount = 0;
+
+    // 更新grid.count
+    if (maxX != -1) {
+        for (int shift=0; shift<6; shift++) {
+            if (grid.data[maxY][maxX+shift] == 0) continue;
+            grid.count[maxY][maxX+shift][1] = revertCount(maxCount);
+        }
+    }
+
+    /**
+     * 2右下对角扫描
+     */
+    maxCount = 0, maxX = -1;
     for (int x=step.x-5, y=step.y-5; (x<GRID_SIZE-5 && x<=step.x) && (y<GRID_SIZE-5 && y<=step.y); x++, y++) {
         if (x < 0 || y < 0) continue;
 
         int count = getCount(x, y) + getCount(x + 1, y + 1) + getCount(x + 2, y + 2) + getCount(x + 3, y + 3) + getCount(x + 4, y + 4) + getCount(x + 5, y + 5);
 
-        if (count > 6 && count % 7 != 0) continue; // 黑白混杂不计入
-        if (count > maxCount) maxCount = count; // 更新max
+        // 归零grid.count
+        grid.count[y][x][2] = 0;
+
+        // 黑白混杂不计入
+        if (count > 6 && count % 7 != 0) continue;
+
+        // 更新max
+        if (count > maxCount) {
+            maxCount = count;
+            maxX = x;
+            maxY = y;
+        }
     }
-    updateRoadTypeNum(maxCount, countOfMyRoad, countOfEnemyRoad);
-    // 左下对角扫描
-    maxCount = 0;
+
+    // 更新grid.count
+    if (maxX != -1) {
+        for (int shift=0; shift<6; shift++) {
+            if (grid.data[maxY+shift][maxX+shift] == 0) continue;
+            grid.count[maxY+shift][maxX+shift][2] = revertCount(maxCount);
+        }
+    }
+
+    /**
+     * 3左下对角扫描
+     */
+    maxCount = 0, maxX = -1;
     for (int x=step.x+5, y=step.y-5; (x>=5 && x>=step.x) && (y<GRID_SIZE-5 && y<=step.y); x--, y++) {
         if (x >= GRID_SIZE || y < 0) continue;
 
         int count = getCount(x, y) + getCount(x - 1, y + 1) + getCount(x - 2, y + 2) + getCount(x - 3, y + 3) + getCount(x - 4, y + 4) + getCount(x - 5, y + 5);
 
-        if (count > 6 && count % 7 != 0) continue; // 黑白混杂不计入
-        if (count > maxCount) maxCount = count; // 更新max
-    }
-    updateRoadTypeNum(maxCount, countOfMyRoad, countOfEnemyRoad);
+        // 归零grid.count
+        grid.count[y][x][3] = 0;
 
-    //
-    for (int i=1; i<=2; i++) {
-        score += (countOfMyRoad[i] * scoreOfMyRoad[i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[i]);
-    }
-    for (int i=3; i<=5; i++) {
-        if (countOfMyRoad[i] >= 2 && countOfEnemyRoad[i] >= 2) {
-            score += (countOfMyRoad[i] * scoreOfMyRoad[i+1] - countOfEnemyRoad[i] * scoreOfEnemyRoad[i+1]);
-        } else if (countOfMyRoad[i] >= 2) {
-            score += (countOfMyRoad[i] * scoreOfMyRoad[i+1] - countOfEnemyRoad[i] * scoreOfEnemyRoad[i]);
-        } else if (countOfEnemyRoad[i] >= 2) {
-            score += (countOfMyRoad[i] * scoreOfMyRoad[i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[i+1]);
-        } else {
-            score += (countOfMyRoad[i] * scoreOfMyRoad[i] - countOfEnemyRoad[i] * scoreOfEnemyRoad[i]);
+        // 黑白混杂不计入
+        if (count > 6 && count % 7 != 0) continue;
+
+        // 更新max
+        if (count > maxCount) {
+            maxCount = count;
+            maxX = x;
+            maxY = y;
         }
     }
-    score += (countOfMyRoad[6] * scoreOfMyRoad[6] - countOfEnemyRoad[6] * scoreOfEnemyRoad[6]);
 
-    return score;
+    // 更新grid.count
+    if (maxX != -1) {
+        for (int shift=0; shift<6; shift++) {
+            if (grid.data[maxY+shift][maxX-shift] == 0) continue;
+            grid.count[maxY+shift][maxX-shift][3] = revertCount(maxCount);
+        }
+    }
 }
+

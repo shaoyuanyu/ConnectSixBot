@@ -54,7 +54,7 @@ int main() {
 
     int turnId = inputGrid(grid, bot);
 
-    grid.output();
+//    grid.output();
 
     Move result = bot.makeDecision(grid, turnId);
 

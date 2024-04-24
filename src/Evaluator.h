@@ -21,6 +21,7 @@ private:
 
     long calScore();
     long calScore(Move move);
+    long calScore(Step step);
     inline int getCount(int x, int y);
     inline int revertCount(int count) const;
     inline void updateRoadTypeNum(int count, std::vector<int>& countOfMyRoad, std::vector<int>& countOfEnemyRoad) const;
@@ -29,6 +30,7 @@ public:
     Evaluator(Grid& grid, Color botColor);
 
     void scan(Move move);
+    void scan(Step step);
 
     long evaluate();
     long evaluate(Move move);

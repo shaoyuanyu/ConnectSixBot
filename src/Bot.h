@@ -21,7 +21,7 @@ private:
 
     std::vector<GameNode*> firstMoveNodes;
 
-//    std::vector<Step> availableSteps;
+    std::vector<Step> availableSteps;
 
     Move makeOpening();
     Move simulateStep(Grid& grid);
