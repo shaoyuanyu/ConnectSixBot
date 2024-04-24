@@ -16,7 +16,7 @@
 class Bot {
 private:
     Color botColor;
-    int DEPTH_LIMIT = 4; // 每次推理深度
+    int DEPTH_LIMIT = 3; // 每次推理深度
     int TOP_K = 20;
 
     std::vector<GameNode*> firstMoveNodes;
@@ -25,7 +25,7 @@ private:
 
     Move makeOpening();
     Move simulateStep(Grid& grid);
-    std::vector<Step> preSimulate(Grid& grid) const;
+    void preSimulate(Grid grid);
     long simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color currentColor, int moveCount);
 
 public:

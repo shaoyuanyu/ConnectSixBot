@@ -179,18 +179,18 @@ long Evaluator::calScore(Move move) {
 long Evaluator::calScore(Step step) {
     long score = 0;
     std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
-    std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
 
     // 统计
     for (int type=0; type<=3; type++) {
         int count = grid.count[step.y][step.x][type];
 
         if (count > 0) countOfMyRoad[count]++;
-        else if (count < 0) countOfEnemyRoad[-count]++;
     }
 
     // 计分
-    score += (countOfMyRoad[6] * scoreOfMyRoad[6] - countOfEnemyRoad[6] * scoreOfEnemyRoad[6]);
+    for (int i=1; i<=6; i++) {
+        score += countOfMyRoad[i] * scoreOfMyRoad[i];
+    }
 
     return score;
 }
