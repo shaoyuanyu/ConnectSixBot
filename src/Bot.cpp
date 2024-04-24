@@ -49,12 +49,18 @@ void Bot::preSimulate(Grid grid) {
 
         // 我方落子分数
         experimentGrid.doStep(step.x, step.y, botColor);
+//        std::cout << "my:" << std::endl;
+//        experimentGrid.output();
         long myScore = myEvaluator.preEvaluate(step);
 
         experimentGrid.undoStep(step.x, step.y);
+//        std::cout << "undo:" << std::endl;
+//        experimentGrid.output();
 
         // 敌方落子分数
         experimentGrid.doStep(step.x, step.y, -botColor);
+//        std::cout << "enemy:" << std::endl;
+//        experimentGrid.output();
         long enemyScore = enemyEvaluator.preEvaluate(step);
 
         // 计算权重
@@ -101,7 +107,7 @@ Move Bot::simulateStep(Grid& grid) {
 
             //
 //            std::cout << "(" << step0.x << ", " << step0.y << "), (" << step1.x << ", " << step1.y << "): " << std::endl;
-//            childGrid.output();
+////            childGrid.output();
 //            std::cout << childScore << std::endl;
 //            std::cout << std::endl;
 
@@ -126,7 +132,13 @@ long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color curr
     // 若搜索深度触底，终止搜索，进行评估
     if (moveCount == DEPTH_LIMIT) {
         parentNode->score = Evaluator(parentGrid, botColor).evaluate();
+        return parentNode->score;
+    }
 
+    // 熔断机制
+    parentNode->score = Evaluator(parentGrid, botColor).evaluate(parentNode->move);
+    if (parentNode->score >= 10000000000 || parentNode->score <= -10000000000) {
+        parentNode->score = Evaluator(parentGrid, botColor).evaluate();
         return parentNode->score;
     }
 
@@ -134,11 +146,11 @@ long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color curr
     long max = -LONG_MAX, min = LONG_MAX;
 
     // 继续搜索
-    for (int i=0; i<availableSteps.size()/2; i++) {
+    for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
         if (parentGrid.data[step0.y][step0.x] != BLANK) continue;
 
-        for (int j=i+1; j<availableSteps.size()/2; j++) {
+        for (int j=i+1; j<availableSteps.size(); j++) {
             Step step1 = availableSteps[j];
             if (parentGrid.data[step1.y][step1.x] != BLANK) continue;
 
@@ -150,21 +162,7 @@ long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color curr
             Grid currentGrid = parentGrid;
             currentGrid.doMove(currentMove, currentColor);
 
-            // 局部检测，若已连成6子则无需继续推理
-            long currentScore = Evaluator(currentGrid, botColor).evaluate(currentMove);
-
-            if (currentScore >= 10000000000 || currentScore <= -10000000000) {
-                // 已连成6子
-//                std::cout << "already 6" << std::endl;
-
-                parentNode->score = currentScore * 10;
-
-                return parentNode->score;
-
-            } else {
-                // 继续搜索
-                currentScore = simulateStep(currentNode, currentGrid, -(currentColor), moveCount + 1);
-            }
+            long currentScore = simulateStep(currentNode, currentGrid, -(currentColor), moveCount + 1);
 
             // 释放内存
             delete currentNode; // 耗时操作

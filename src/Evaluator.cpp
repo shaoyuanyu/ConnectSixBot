@@ -147,6 +147,7 @@ long Evaluator::evaluate() {
 
                 x--, y++;
             }
+//            std::cout << "TEST: rd: (" << x << ", " << y << "): " << maxRoad << std::endl;
             updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
         }
     }
@@ -157,42 +158,6 @@ long Evaluator::evaluate() {
 //        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
 //    }
 //    std::cout << std::endl;
-
-
-    // 双四路 = 六路
-    if (countOfMyRoad[4] >= 2) {
-        countOfMyRoad[6] = countOfMyRoad[4] / 2;
-        countOfMyRoad[4] %= 2;
-    }
-    if (countOfEnemyRoad[4] >= 2) {
-        countOfEnemyRoad[6] = countOfEnemyRoad[4] / 2;
-        countOfEnemyRoad[6] %= 2;
-    }
-
-    // 四路 + 五路 = 六路
-    if (countOfMyRoad[4] > 0 && countOfMyRoad[5] > 0) {
-        int pairs = (countOfMyRoad[4] <= countOfMyRoad[5]) ? countOfMyRoad[4] : countOfMyRoad[5];
-        countOfMyRoad[4] -= pairs;
-        countOfMyRoad[5] -= pairs;
-        countOfMyRoad[6] += pairs;
-    }
-    if (countOfEnemyRoad[4] > 0 && countOfEnemyRoad[5] > 0) {
-        int pairs = (countOfEnemyRoad[4] <= countOfEnemyRoad[5]) ? countOfEnemyRoad[4] : countOfEnemyRoad[5];
-        countOfEnemyRoad[4] -= pairs;
-        countOfEnemyRoad[5] -= pairs;
-        countOfEnemyRoad[6] += pairs;
-    }
-
-    // 双五路 = 六路
-    if (countOfMyRoad[5] >= 2) {
-        countOfMyRoad[6] = countOfMyRoad[5] / 2;
-        countOfMyRoad[5] %= 2;
-    }
-    if (countOfEnemyRoad[5] >= 2) {
-        countOfEnemyRoad[6] = countOfEnemyRoad[5] / 2;
-        countOfEnemyRoad[5] %= 2;
-    }
-
 
     // 计分
     for (int i=1; i<=6; i++) {
@@ -211,11 +176,10 @@ long Evaluator::evaluate(Move move) {
     std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
     std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
     int maxRoad;
-    Color roadColor;
     bool inOneRoad;
 
     // 纵向 (x0, y0)
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=move.x0, y=move.y0-5; y<=move.y0; y++) {
         if (y < 0) continue;
 
@@ -239,7 +203,7 @@ long Evaluator::evaluate(Move move) {
         }
     }
     if (!inOneRoad) {
-        maxRoad = 0, roadColor = BLACK;
+        maxRoad = 0;
         for (int x=move.x1, y=move.y1-5; y<=move.y1; y++) {
             if (y < 0) continue;
 
@@ -252,8 +216,15 @@ long Evaluator::evaluate(Move move) {
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
 
+    // output
+//    std::cout << "扫描纵向后" << std::endl;
+//    for (int i=1; i<=6; i++) {
+//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
+//    }
+//    std::cout << std::endl;
+
     // 横向 (x0, y0)
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=move.x0-5, y=move.y0; x<=move.x0; x++) {
         if (x < 0) continue;
 
@@ -277,7 +248,7 @@ long Evaluator::evaluate(Move move) {
         }
     }
     if (!inOneRoad) {
-        maxRoad = 0, roadColor = BLACK;
+        maxRoad = 0;
         for (int x=move.x1-5, y=move.y1; x<=move.x1; x++) {
             if (x < 0) continue;
 
@@ -290,8 +261,15 @@ long Evaluator::evaluate(Move move) {
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
 
+    // output
+//    std::cout << "扫描横向后" << std::endl;
+//    for (int i=1; i<=6; i++) {
+//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
+//    }
+//    std::cout << std::endl;
+
     // 右下对角 (x0, y0)
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=move.x0-5, y=move.y0-5; x<=move.x0 && y<=move.y0; x++, y++) {
         if (x < 0 || y < 0) continue;
 
@@ -315,7 +293,7 @@ long Evaluator::evaluate(Move move) {
         }
     }
     if (!inOneRoad) {
-        maxRoad = 0, roadColor = BLACK;
+        maxRoad = 0;
         for (int x=move.x1-5, y=move.y1-5; x<=move.x1 && y<=move.y1; x++, y++) {
             if (x < 0 || y < 0) continue;
 
@@ -328,8 +306,15 @@ long Evaluator::evaluate(Move move) {
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
 
+    // output
+//    std::cout << "扫描右下对角后" << std::endl;
+//    for (int i=1; i<=6; i++) {
+//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
+//    }
+//    std::cout << std::endl;
+
     // 左下对角 (x0, y0)
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=move.x0+5, y=move.y0-5; x>=move.x0 && y<=move.y0; x--, y++) {
         if (x >= GRID_SIZE || y < 0) continue;
 
@@ -353,7 +338,7 @@ long Evaluator::evaluate(Move move) {
         }
     }
     if (!inOneRoad) {
-        maxRoad = 0, roadColor = BLACK;
+        maxRoad = 0;
         for (int x=move.x0+5, y=move.y0-5; x>=move.x0 && y<=move.y0; x--, y++) {
             if (x >= GRID_SIZE || y < 0) continue;
 
@@ -366,40 +351,47 @@ long Evaluator::evaluate(Move move) {
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
 
+    // output
+//    std::cout << "扫描左下对角后" << std::endl;
+//    for (int i=1; i<=6; i++) {
+//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
+//    }
+//    std::cout << std::endl;
 
-    // 双四路 = 六路
-    if (countOfMyRoad[4] >= 2) {
-        countOfMyRoad[6] = countOfMyRoad[4] / 2;
-        countOfMyRoad[4] %= 2;
-    }
-    if (countOfEnemyRoad[4] >= 2) {
-        countOfEnemyRoad[6] = countOfEnemyRoad[4] / 2;
-        countOfEnemyRoad[6] %= 2;
-    }
 
-    // 四路 + 五路 = 六路
-    if (countOfMyRoad[4] > 0 && countOfMyRoad[5] > 0) {
-        int pairs = (countOfMyRoad[4] <= countOfMyRoad[5]) ? countOfMyRoad[4] : countOfMyRoad[5];
-        countOfMyRoad[4] -= pairs;
-        countOfMyRoad[5] -= pairs;
-        countOfMyRoad[6] += pairs;
-    }
-    if (countOfEnemyRoad[4] > 0 && countOfEnemyRoad[5] > 0) {
-        int pairs = (countOfEnemyRoad[4] <= countOfEnemyRoad[5]) ? countOfEnemyRoad[4] : countOfEnemyRoad[5];
-        countOfEnemyRoad[4] -= pairs;
-        countOfEnemyRoad[5] -= pairs;
-        countOfEnemyRoad[6] += pairs;
-    }
-
-    // 双五路 = 六路
-    if (countOfMyRoad[5] >= 2) {
-        countOfMyRoad[6] = countOfMyRoad[5] / 2;
-        countOfMyRoad[5] %= 2;
-    }
-    if (countOfEnemyRoad[5] >= 2) {
-        countOfEnemyRoad[6] = countOfEnemyRoad[5] / 2;
-        countOfEnemyRoad[5] %= 2;
-    }
+//    // 双四路 = 六路
+//    if (countOfMyRoad[4] >= 2) {
+//        countOfMyRoad[6] = countOfMyRoad[4] / 2;
+//        countOfMyRoad[4] %= 2;
+//    }
+//    if (countOfEnemyRoad[4] >= 2) {
+//        countOfEnemyRoad[6] = countOfEnemyRoad[4] / 2;
+//        countOfEnemyRoad[6] %= 2;
+//    }
+//
+//    // 四路 + 五路 = 六路
+//    if (countOfMyRoad[4] > 0 && countOfMyRoad[5] > 0) {
+//        int pairs = (countOfMyRoad[4] <= countOfMyRoad[5]) ? countOfMyRoad[4] : countOfMyRoad[5];
+//        countOfMyRoad[4] -= pairs;
+//        countOfMyRoad[5] -= pairs;
+//        countOfMyRoad[6] += pairs;
+//    }
+//    if (countOfEnemyRoad[4] > 0 && countOfEnemyRoad[5] > 0) {
+//        int pairs = (countOfEnemyRoad[4] <= countOfEnemyRoad[5]) ? countOfEnemyRoad[4] : countOfEnemyRoad[5];
+//        countOfEnemyRoad[4] -= pairs;
+//        countOfEnemyRoad[5] -= pairs;
+//        countOfEnemyRoad[6] += pairs;
+//    }
+//
+//    // 双五路 = 六路
+//    if (countOfMyRoad[5] >= 2) {
+//        countOfMyRoad[6] = countOfMyRoad[5] / 2;
+//        countOfMyRoad[5] %= 2;
+//    }
+//    if (countOfEnemyRoad[5] >= 2) {
+//        countOfEnemyRoad[6] = countOfEnemyRoad[5] / 2;
+//        countOfEnemyRoad[5] %= 2;
+//    }
 
 
     // 计分
@@ -419,10 +411,9 @@ long Evaluator::preEvaluate(Step step) {
     std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
     std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
     int maxRoad;
-    Color roadColor;
 
     // 纵向
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=step.x, y=step.y-5; y<=step.y; y++) {
         if (y < 0) continue;
 
@@ -436,7 +427,7 @@ long Evaluator::preEvaluate(Step step) {
 
 
     // 横向
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=step.x-5, y=step.y; x<=step.x; x++) {
         if (x < 0) continue;
 
@@ -450,7 +441,7 @@ long Evaluator::preEvaluate(Step step) {
 
 
     // 右下对角
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=step.x-5, y=step.y-5; x<=step.x && y<=step.y; x++, y++) {
         if (x < 0 || y < 0) continue;
 
@@ -464,7 +455,7 @@ long Evaluator::preEvaluate(Step step) {
 
 
     // 左下对角
-    maxRoad = 0, roadColor = BLACK;
+    maxRoad = 0;
     for (int x=step.x+5, y=step.y-5; x>=step.x && y<=step.y; x--, y++) {
         if (x >= GRID_SIZE || y < 0) continue;
 
@@ -475,6 +466,10 @@ long Evaluator::preEvaluate(Step step) {
         if (road > maxRoad) maxRoad = road;
     }
     updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
+
+    // Step模式 五路 = 六路
+    countOfMyRoad[6] += countOfMyRoad[5];
+    countOfMyRoad[5] = 0;
 
     // 计分
     for (int i=1; i<=6; i++) {

@@ -16,8 +16,8 @@
 class Bot {
 private:
     Color botColor;
-    int DEPTH_LIMIT = 3; // 每次推理深度
-    int TOP_K = 20;
+    int DEPTH_LIMIT = 2; // 每次推理深度
+    int TOP_K = 15;
 
     std::vector<GameNode*> firstMoveNodes;
 

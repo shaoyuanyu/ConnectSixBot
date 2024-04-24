@@ -53,8 +53,6 @@ int main() {
     int turnId = inputGrid(grid, bot);
 
 //    grid.output();
-//
-//    Evaluator(grid, bot.getColor()).evaluate();
 
     Move result = bot.makeDecision(grid, turnId);
 
