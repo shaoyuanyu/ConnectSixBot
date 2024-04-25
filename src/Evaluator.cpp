@@ -192,14 +192,24 @@ long Evaluator::evaluate() {
     }
 
 
-    // 2 * 两端为空的四路 = 六路
-    if (countOfMyRoad[8] >= 2) {
-        countOfMyRoad[6] += countOfMyRoad[8] / 2;
-        countOfMyRoad[4] += countOfMyRoad[8] % 2;
+    // 两端为空的四路（活四路） + 任意四路 = 六路
+    if (countOfMyRoad[8] >= 1) {
+        countOfMyRoad[6] += (countOfMyRoad[8] + countOfMyRoad[4]) / 2;
+        countOfMyRoad[4] = (countOfMyRoad[8] + countOfMyRoad[4]) % 2;
     }
-    if (countOfEnemyRoad[8] >= 2) {
-        countOfEnemyRoad[6] += countOfEnemyRoad[8] / 2;
-        countOfEnemyRoad[4] += countOfEnemyRoad[8] % 2;
+    if (countOfEnemyRoad[8] >= 1) {
+        countOfEnemyRoad[6] += (countOfEnemyRoad[8] + countOfEnemyRoad[4]) / 2;
+        countOfEnemyRoad[4] = (countOfEnemyRoad[8] + countOfEnemyRoad[4]) % 2;
+    }
+
+    // 3 * 一端为空的四路（半活四路） = 六路
+    if (countOfMyRoad[4] >= 3) {
+        countOfMyRoad[6] += countOfMyRoad[4] / 3;
+        countOfMyRoad[4] %= 3;
+    }
+    if (countOfEnemyRoad[4] >= 3) {
+        countOfEnemyRoad[6] += countOfEnemyRoad[4] / 3;
+        countOfEnemyRoad[4] %= 3;
     }
 
 
@@ -373,7 +383,6 @@ long Evaluator::evaluate(Move move) {
         }
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
-
 
     // 计分
     for (int i=1; i<=6; i++) {

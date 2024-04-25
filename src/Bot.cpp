@@ -31,6 +31,12 @@ Move Bot::makeDecision(Grid& grid, const int& turnId) {
     // 我方为黑开局，则转向开局库决策
     if (turnId == 1 && botColor == BLACK) return makeOpening();
 
+    // 防止超时
+    if (turnId >= 35) {
+        DEPTH_LIMIT = 3;
+        TOP_K = 8;
+    }
+
     return simulateStep(grid);
 }
 
@@ -38,9 +44,8 @@ Move Bot::makeDecision(Grid& grid, const int& turnId) {
 /**
  * 预推理，得到可选落点（top-k个）
  */
-std::vector<Step> Bot::preSimulate(Grid grid) {
+void Bot::preSimulate(Grid grid) {
     std::priority_queue<Step, std::vector<Step>, std::less<>> steps;
-    std::vector<Step> availableSteps;
 
     for (Step step: grid.getAll()) {
         //
@@ -68,8 +73,6 @@ std::vector<Step> Bot::preSimulate(Grid grid) {
         availableSteps.push_back(steps.top());
         steps.pop();
     }
-
-    return availableSteps;
 }
 
 
@@ -78,7 +81,7 @@ std::vector<Step> Bot::preSimulate(Grid grid) {
  */
 Move Bot::simulateStep(Grid& grid) {
     //
-    std::vector<Step> availableSteps = preSimulate(grid);
+    preSimulate(grid);
 
     // 第一次move（我方）中最大者（相当于根max节点在进行选择）
     Move maxMove = Move(-1, -1, -1, -1);
@@ -143,7 +146,6 @@ long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color curr
     long max = -LONG_MAX, min = LONG_MAX;
 
     // 继续搜索
-    std::vector<Step> availableSteps = preSimulate(parentGrid);
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
         if (parentGrid.data[step0.y][step0.x] != BLANK) continue;
