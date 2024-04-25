@@ -38,8 +38,9 @@ Move Bot::makeDecision(Grid& grid, const int& turnId) {
 /**
  * 预推理，得到可选落点（top-k个）
  */
-void Bot::preSimulate(Grid grid) {
+std::vector<Step> Bot::preSimulate(Grid grid) {
     std::priority_queue<Step, std::vector<Step>, std::less<>> steps;
+    std::vector<Step> availableSteps;
 
     for (Step step: grid.getAll()) {
         //
@@ -49,18 +50,12 @@ void Bot::preSimulate(Grid grid) {
 
         // 我方落子分数
         experimentGrid.doStep(step.x, step.y, botColor);
-//        std::cout << "my:" << std::endl;
-//        experimentGrid.output();
         long myScore = myEvaluator.preEvaluate(step);
 
         experimentGrid.undoStep(step.x, step.y);
-//        std::cout << "undo:" << std::endl;
-//        experimentGrid.output();
 
         // 敌方落子分数
         experimentGrid.doStep(step.x, step.y, -botColor);
-//        std::cout << "enemy:" << std::endl;
-//        experimentGrid.output();
         long enemyScore = enemyEvaluator.preEvaluate(step);
 
         // 计算权重
@@ -73,6 +68,8 @@ void Bot::preSimulate(Grid grid) {
         availableSteps.push_back(steps.top());
         steps.pop();
     }
+
+    return availableSteps;
 }
 
 
@@ -81,7 +78,7 @@ void Bot::preSimulate(Grid grid) {
  */
 Move Bot::simulateStep(Grid& grid) {
     //
-    preSimulate(grid);
+    std::vector<Step> availableSteps = preSimulate(grid);
 
     // 第一次move（我方）中最大者（相当于根max节点在进行选择）
     Move maxMove = Move(-1, -1, -1, -1);
@@ -146,6 +143,7 @@ long Bot::simulateStep(GameNode*& parentNode, Grid& parentGrid, const Color curr
     long max = -LONG_MAX, min = LONG_MAX;
 
     // 继续搜索
+    std::vector<Step> availableSteps = preSimulate(parentGrid);
     for (int i=0; i<availableSteps.size(); i++) {
         Step step0 = availableSteps[i];
         if (parentGrid.data[step0.y][step0.x] != BLANK) continue;
