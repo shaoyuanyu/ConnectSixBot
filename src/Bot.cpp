@@ -103,10 +103,10 @@ Move Bot::simulateStep(Grid& grid) {
             long childScore = simulateStep(childNode, childGrid, -botColor, 1);
 
             //
-//            std::cout << "(" << step0.x << ", " << step0.y << "), (" << step1.x << ", " << step1.y << "): " << std::endl;
-////            childGrid.output();
-//            std::cout << childScore << std::endl;
-//            std::cout << std::endl;
+            std::cout << "(" << step0.x << ", " << step0.y << "), (" << step1.x << ", " << step1.y << "): " << std::endl;
+//            childGrid.output();
+            std::cout << childScore << std::endl;
+            std::cout << std::endl;
 
             if (childScore > max) {
                 maxMove = childMove;

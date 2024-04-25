@@ -8,16 +8,16 @@ Evaluator::Evaluator(Grid& grid, Color botColor): grid(grid), botColor(botColor)
     scoreOfMyRoad[0] = 0;
     scoreOfMyRoad[1] = 1;
     scoreOfMyRoad[2] = 20;
-    scoreOfMyRoad[3] = 200;
-    scoreOfMyRoad[4] = 100000;
+    scoreOfMyRoad[3] = 2000;
+    scoreOfMyRoad[4] = 1000000;
     scoreOfMyRoad[5] = 10000000;
     scoreOfMyRoad[6] = 100000000000;
 
     scoreOfEnemyRoad[0] = 0;
     scoreOfEnemyRoad[1] = 1;
     scoreOfEnemyRoad[2] = 20;
-    scoreOfEnemyRoad[3] = 200;
-    scoreOfEnemyRoad[4] = 100000;
+    scoreOfEnemyRoad[3] = 2000;
+    scoreOfEnemyRoad[4] = 1000000;
     scoreOfEnemyRoad[5] = 10000000;
     scoreOfEnemyRoad[6] = 100000000000;
 }
@@ -31,133 +31,177 @@ long Evaluator::evaluate() {
     std::vector<int> countOfMyRoad = std::vector<int>(10, 0);
     std::vector<int> countOfEnemyRoad = std::vector<int>(10, 0);
     int maxRoad;
+    bool isAliveFourRoad;
 
     // 纵向
     for (int x=0; x<GRID_SIZE; x++) {
         for (int y=0; y<GRID_SIZE-5; y++) {
-            maxRoad = 0;
+            maxRoad = 0, isAliveFourRoad = false;
+
             while (y < GRID_SIZE - 5) {
                 int road = grid.road[y][x][0];
 
                 if (road >= 7 && road % 7 != 0) break; // 混色路不计入
 
-                if (road > maxRoad) maxRoad = road;
+                if (road > maxRoad) {
+                    maxRoad = road;
+                    if ((road == 4 || road == 28) && grid.data[y][x] == BLANK && grid.data[y+5][x] == BLANK) isAliveFourRoad = true; // 标记活四路
+                }
 
                 y++;
             }
+
+            // 对于两端有空格的四路，和只有一端有空格的四路区分开来
+            if ((maxRoad == 4 || maxRoad == 28) && isAliveFourRoad) {
+                maxRoad *= 2;
+            }
+
             updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
         }
     }
 
-    // output
-//    std::cout << "扫描纵向后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
-
     // 横向
     for (int y=0; y<GRID_SIZE; y++) {
         for (int x=0; x<GRID_SIZE-5; x++) {
-            maxRoad = 0;
+            maxRoad = 0, isAliveFourRoad = false;
+
             while (x < GRID_SIZE - 5) {
                 int road = grid.road[y][x][1];
 
                 if (road >= 7 && road % 7 != 0) break; // 混色路不计入
 
-                if (road > maxRoad) maxRoad = road;
+                if (road > maxRoad) {
+                    maxRoad = road;
+                    if ((road == 4 || road == 28) && grid.data[y][x] == BLANK && grid.data[y][x+5] == BLANK) isAliveFourRoad = true; // 标记活四路
+                }
 
                 x++;
             }
+
+            // 对于两端有空格的四路，和只有一端有空格的四路区分开来
+            if ((maxRoad == 4 || maxRoad == 28) && isAliveFourRoad) {
+                maxRoad *= 2;
+            }
+
             updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
         }
     }
 
-    // output
-//    std::cout << "扫描横向后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
-
     // 右下对角
     for (int startX=0, startY=0; startY<GRID_SIZE-5; startY++) {
         for (int x=startX, y=startY; x<GRID_SIZE-5 && y<GRID_SIZE-5; x++, y++) {
-            maxRoad = 0;
+            maxRoad = 0, isAliveFourRoad = false;
+
             while (x < GRID_SIZE - 5 && y < GRID_SIZE - 5) {
                 int road = grid.road[y][x][2];
 
                 if (road >= 7 && road % 7 != 0) break; // 混色路不计入
 
-                if (road > maxRoad) maxRoad = road;
+                if (road > maxRoad) {
+                    maxRoad = road;
+                    if ((road == 4 || road == 28) && grid.data[y][x] == BLANK && grid.data[y+5][x+5] == BLANK) isAliveFourRoad = true; // 标记活四路
+                }
 
                 x++, y++;
             }
+
+            // 对于两端有空格的四路，和只有一端有空格的四路区分开来
+            if ((maxRoad == 4 || maxRoad == 28) && isAliveFourRoad) {
+                maxRoad *= 2;
+            }
+
             updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
         }
     }
     for (int startX=1, startY=0; startX<GRID_SIZE-5; startX++) {
         for (int x=startX, y=startY; x<GRID_SIZE-5 && y<GRID_SIZE-5; x++, y++) {
-            maxRoad = 0;
+            maxRoad = 0, isAliveFourRoad = false;
+
             while (x < GRID_SIZE - 5 && y < GRID_SIZE - 5) {
                 int road = grid.road[y][x][2];
 
                 if (road >= 7 && road % 7 != 0) break; // 混色路不计入
 
-                if (road > maxRoad) maxRoad = road;
+                if (road > maxRoad) {
+                    maxRoad = road;
+                    if ((road == 4 || road == 28) && grid.data[y][x] == BLANK && grid.data[y+5][x+5] == BLANK) isAliveFourRoad = true; // 标记活四路
+                }
 
                 x++, y++;
             }
+
+            // 对于两端有空格的四路，和只有一端有空格的四路区分开来
+            if ((maxRoad == 4 || maxRoad == 28) && isAliveFourRoad) {
+                maxRoad *= 2;
+            }
+
             updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
         }
     }
 
-    // output
-//    std::cout << "扫描右下对角后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
-
     // 左下对角
     for (int startX=GRID_SIZE-1, startY=0; startY<GRID_SIZE-5; startY++) {
         for (int x=startX, y=startY; x>=5 && y<GRID_SIZE-5; x--, y++) {
-            maxRoad = 0;
+            maxRoad = 0, isAliveFourRoad = false;
+
             while (x >= 5 && y < GRID_SIZE - 5) {
                 int road = grid.road[y][x][3];
 
                 if (road >= 7 && road % 7 != 0) break; // 混色路不计入
 
-                if (road > maxRoad) maxRoad = road;
+                if (road > maxRoad) {
+                    maxRoad = road;
+                    if ((road == 4 || road == 28) && grid.data[y][x] == BLANK && grid.data[y+5][x-5] == BLANK) isAliveFourRoad = true; // 标记活四路
+                }
 
                 x--, y++;
             }
+
+            // 对于两端有空格的四路，和只有一端有空格的四路区分开来
+            if ((maxRoad == 4 || maxRoad == 28) && isAliveFourRoad) {
+                maxRoad *= 2;
+            }
+
             updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
         }
     }
     for (int startX=GRID_SIZE-2, startY=0; startX>=5; startX--) {
         for (int x=startX, y=startY; x>=5 && y<GRID_SIZE-5; x--, y++) {
-            maxRoad = 0;
+            maxRoad = 0, isAliveFourRoad = false;
+
             while (x >= 5 && y < GRID_SIZE - 5) {
                 int road = grid.road[y][x][3];
 
                 if (road >= 7 && road % 7 != 0) break; // 混色路不计入
 
-                if (road > maxRoad) maxRoad = road;
+                if (road > maxRoad) {
+                    maxRoad = road;
+                    if ((road == 4 || road == 28) && grid.data[y][x] == BLANK && grid.data[y+5][x-5] == BLANK) isAliveFourRoad = true; // 标记活四路
+                }
 
                 x--, y++;
             }
-//            std::cout << "TEST: rd: (" << x << ", " << y << "): " << maxRoad << std::endl;
+
+            // 对于两端有空格的四路，和只有一端有空格的四路区分开来
+            if ((maxRoad == 4 || maxRoad == 28) && isAliveFourRoad) {
+                maxRoad *= 2;
+            }
+
             updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
         }
     }
 
-    // output
-//    std::cout << "扫描左下对角后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
+
+    // 2 * 两端为空的四路 = 六路
+    if (countOfMyRoad[8] >= 2) {
+        countOfMyRoad[6] += countOfMyRoad[8] / 2;
+        countOfMyRoad[4] += countOfMyRoad[8] % 2;
+    }
+    if (countOfEnemyRoad[8] >= 2) {
+        countOfEnemyRoad[6] += countOfEnemyRoad[8] / 2;
+        countOfEnemyRoad[4] += countOfEnemyRoad[8] % 2;
+    }
+
 
     // 计分
     for (int i=1; i<=6; i++) {
@@ -216,13 +260,6 @@ long Evaluator::evaluate(Move move) {
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
 
-    // output
-//    std::cout << "扫描纵向后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
-
     // 横向 (x0, y0)
     maxRoad = 0;
     for (int x=move.x0-5, y=move.y0; x<=move.x0; x++) {
@@ -260,13 +297,6 @@ long Evaluator::evaluate(Move move) {
         }
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
-
-    // output
-//    std::cout << "扫描横向后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
 
     // 右下对角 (x0, y0)
     maxRoad = 0;
@@ -306,13 +336,6 @@ long Evaluator::evaluate(Move move) {
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
 
-    // output
-//    std::cout << "扫描右下对角后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
-
     // 左下对角 (x0, y0)
     maxRoad = 0;
     for (int x=move.x0+5, y=move.y0-5; x>=move.x0 && y<=move.y0; x--, y++) {
@@ -350,48 +373,6 @@ long Evaluator::evaluate(Move move) {
         }
         updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
     }
-
-    // output
-//    std::cout << "扫描左下对角后" << std::endl;
-//    for (int i=1; i<=6; i++) {
-//        std::cout << i << "路: " << countOfMyRoad[i] << ", " << countOfEnemyRoad[i] << std::endl;
-//    }
-//    std::cout << std::endl;
-
-
-//    // 双四路 = 六路
-//    if (countOfMyRoad[4] >= 2) {
-//        countOfMyRoad[6] = countOfMyRoad[4] / 2;
-//        countOfMyRoad[4] %= 2;
-//    }
-//    if (countOfEnemyRoad[4] >= 2) {
-//        countOfEnemyRoad[6] = countOfEnemyRoad[4] / 2;
-//        countOfEnemyRoad[6] %= 2;
-//    }
-//
-//    // 四路 + 五路 = 六路
-//    if (countOfMyRoad[4] > 0 && countOfMyRoad[5] > 0) {
-//        int pairs = (countOfMyRoad[4] <= countOfMyRoad[5]) ? countOfMyRoad[4] : countOfMyRoad[5];
-//        countOfMyRoad[4] -= pairs;
-//        countOfMyRoad[5] -= pairs;
-//        countOfMyRoad[6] += pairs;
-//    }
-//    if (countOfEnemyRoad[4] > 0 && countOfEnemyRoad[5] > 0) {
-//        int pairs = (countOfEnemyRoad[4] <= countOfEnemyRoad[5]) ? countOfEnemyRoad[4] : countOfEnemyRoad[5];
-//        countOfEnemyRoad[4] -= pairs;
-//        countOfEnemyRoad[5] -= pairs;
-//        countOfEnemyRoad[6] += pairs;
-//    }
-//
-//    // 双五路 = 六路
-//    if (countOfMyRoad[5] >= 2) {
-//        countOfMyRoad[6] = countOfMyRoad[5] / 2;
-//        countOfMyRoad[5] %= 2;
-//    }
-//    if (countOfEnemyRoad[5] >= 2) {
-//        countOfEnemyRoad[6] = countOfEnemyRoad[5] / 2;
-//        countOfEnemyRoad[5] %= 2;
-//    }
 
 
     // 计分
@@ -466,10 +447,6 @@ long Evaluator::preEvaluate(Step step) {
         if (road > maxRoad) maxRoad = road;
     }
     updateRoadCount(maxRoad, countOfMyRoad, countOfEnemyRoad);
-
-    // Step模式 五路 = 六路
-    countOfMyRoad[6] += countOfMyRoad[5];
-    countOfMyRoad[5] = 0;
 
     // 计分
     for (int i=1; i<=6; i++) {
